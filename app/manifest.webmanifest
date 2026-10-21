@@ -1,0 +1,17 @@
+{
+  "name": "Synquei",
+  "short_name": "Synquei",
+  "description": "Sincronize câmeras e gravadores pelo som e exporte para o seu editor.",
+  "start_url": "/app/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b0b0c",
+  "theme_color": "#0b0b0c",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icons/favicon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

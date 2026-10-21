@@ -1,0 +1,12 @@
+{
+  "name": "synquei",
+  "version": "1.0.0",
+  "description": "Synquei: sincronia de câmeras e áudio pelo som, no navegador, com exportação para Premiere, Resolve, Final Cut, Avid e Vegas.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx http-server -p 8080 -c-1 .",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": { "node": ">=20" }
+}
