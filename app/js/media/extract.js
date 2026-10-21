@@ -382,7 +382,17 @@ export async function extractAudio(file, info, { onProgress, signal } = {}) {
       break
     }
     case 'aac':
-      sig = await fromAac(r, plan, dur, onProgress, signal)
+      try {
+        sig = await fromAac(r, plan, dur, onProgress, signal)
+      } catch (e) {
+        // sem WebCodecs (Safari antigo) ou sem AAC nele: o decodificador nativo costuma abrir MP4/MOV com AAC
+        try {
+          sig = await fromDecode(file, onProgress)
+          plan.skip = 0
+        } catch {
+          throw e
+        }
+      }
       break
     case 'ts':
       sig = await fromTs(r, plan, dur, onProgress, signal)

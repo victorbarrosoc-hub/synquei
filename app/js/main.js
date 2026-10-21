@@ -111,13 +111,15 @@ document.addEventListener('keydown', (e) => {
 })
 
 function pick(sel) {
+  $(sel).click()
+}
+for (const sel of ['#pickFolder', '#pickFiles']) {
   const inp = $(sel)
-  inp.onchange = async () => {
+  inp.addEventListener('change', async () => {
     const list = entriesFromInput(inp.files)
     inp.value = ''
     await importEntries(list)
-  }
-  inp.click()
+  })
 }
 
 async function importEntries(list) {
