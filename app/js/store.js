@@ -141,6 +141,19 @@ export function applyType({ name, type, multicam }) {
   changed()
 }
 
+/** Fecha o projeto aberto (ele continua salvo em Projetos) para começar outro. */
+export function closeProject() {
+  if (!S.project) return
+  save(true)
+  S.project = null
+  S.files.clear()
+  S.plans.clear()
+  S.signals.clear()
+  Object.assign(S.ui, { selected: null, session: 0, zoom: null, scroll: 0, needle: 0 })
+  S.sync = { running: false, phase: '', done: 0, total: 0, clip: {}, error: null, finishedAt: null }
+  changed()
+}
+
 export function deleteProject(id) {
   ls.del(KEY(id))
   S.list = S.list.filter((x) => x.id !== id)

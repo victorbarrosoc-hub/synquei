@@ -102,6 +102,9 @@ function menu() {
     {
       label: 'Arquivo',
       submenu: [
+        { label: 'Novo projeto…', accelerator: 'CmdOrCtrl+N', click: () => run(`document.dispatchEvent(new CustomEvent('synquei:acao', { detail: 'novo' }))`) },
+        { label: 'Fechar projeto', accelerator: 'CmdOrCtrl+Shift+W', click: () => run(`document.dispatchEvent(new CustomEvent('synquei:acao', { detail: 'fechar' }))`) },
+        { type: 'separator' },
         { label: 'Adicionar pasta…', accelerator: 'CmdOrCtrl+O', click: () => run(`document.getElementById('pickFolder').click()`) },
         { label: 'Adicionar arquivos…', accelerator: 'CmdOrCtrl+Shift+O', click: () => run(`document.getElementById('pickFiles').click()`) },
         { type: 'separator' },
@@ -114,11 +117,13 @@ function menu() {
     {
       label: 'Ir',
       submenu: [
-        { label: 'Projetos', accelerator: 'CmdOrCtrl+1', click: tab('projetos') },
+        { label: 'Início', accelerator: 'CmdOrCtrl+1', click: tab('inicio') },
         { label: 'Mídia', accelerator: 'CmdOrCtrl+2', click: tab('midia') },
         { label: 'Sincronizar', accelerator: 'CmdOrCtrl+3', click: tab('sincronizar') },
         { label: 'Linha do tempo', accelerator: 'CmdOrCtrl+4', click: tab('linha') },
         { label: 'Exportar', accelerator: 'CmdOrCtrl+5', click: tab('exportar') },
+        { type: 'separator' },
+        { label: 'Projetos', accelerator: 'CmdOrCtrl+6', click: tab('projetos') },
         { type: 'separator' },
         { label: 'Formatos', click: tab('formatos') },
         { label: 'Ajustes', accelerator: 'CmdOrCtrl+,', click: tab('ajustes') },

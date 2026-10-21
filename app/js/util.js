@@ -67,7 +67,7 @@ export function download(data, name, type = 'application/octet-stream') {
 }
 
 /** Modal simples: devolve uma Promise com o valor do botão (ou do campo). */
-export function modal({ title, body = '', input = null, ok = 'OK', cancel = 'Cancelar', danger = false }) {
+export function modal({ title, body = '', input = null, ok = 'OK', cancel = 'Cancelar', alt = null, danger = false }) {
   return new Promise((resolve) => {
     const layer = document.getElementById('layer')
     const back = document.createElement('div')
@@ -76,7 +76,7 @@ export function modal({ title, body = '', input = null, ok = 'OK', cancel = 'Can
       <h2>${h(title)}</h2>
       ${body ? `<p class="sub">${body}</p>` : ''}
       ${input != null ? `<input class="input" name="v" value="${h(input)}" autocomplete="off" />` : ''}
-      <div class="row">${cancel ? `<button type="button" class="btn btn-ghost" data-v="0">${h(cancel)}</button>` : ''}<button class="btn ${danger ? 'btn-danger btn-secondary' : 'btn-primary'}" type="submit">${h(ok)}</button></div>
+      <div class="row">${cancel ? `<button type="button" class="btn btn-ghost" data-v="0">${h(cancel)}</button>` : ''}${alt ? `<button type="button" class="btn btn-secondary" data-v="alt">${h(alt)}</button>` : ''}<button class="btn ${danger ? 'btn-danger btn-secondary' : 'btn-primary'}" type="submit">${h(ok)}</button></div>
     </form>`
     const close = (v) => {
       back.remove()
@@ -84,6 +84,7 @@ export function modal({ title, body = '', input = null, ok = 'OK', cancel = 'Can
     }
     back.addEventListener('click', (e) => {
       if (e.target === back || e.target.dataset.v === '0') close(null)
+      else if (e.target.closest('[data-v="alt"]')) close('alt')
     })
     back.querySelector('form').addEventListener('submit', (e) => {
       e.preventDefault()

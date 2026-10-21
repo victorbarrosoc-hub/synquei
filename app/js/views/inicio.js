@@ -220,7 +220,7 @@ export default {
     if (!p) {
       return `<div class="page page-painel tela">
         <header class="pn-ola" style="--i:0"><h1>${saudacao()}.</h1><p class="page-lead">Solte as pastas da diária. O Synquei reconhece cada arquivo, separa por aparelho e sincroniza pelo som.</p></header>
-        <section class="pn-hero" style="--i:1">${ilustracao()}<div class="pn-hero-txt"><h2>Todas as câmeras no mesmo segundo.</h2><p>Câmera, celular e gravador: o som de cada um acha o lugar certo na linha do tempo, com precisão de milissegundo.</p><div class="pn-hero-cta"><button class="btn btn-primary btn-lg" data-act="pick-folder">${icon('folder')}Escolher pasta</button><button class="btn btn-secondary btn-lg" data-act="demo">${icon('sparkle')}Ver o exemplo</button></div></div></section>
+        <section class="pn-hero" style="--i:1">${ilustracao()}<div class="pn-hero-txt"><h2>Todas as câmeras no mesmo segundo.</h2><p>Câmera, celular e gravador: o som de cada um acha o lugar certo na linha do tempo, com precisão de milissegundo.</p><div class="pn-hero-cta"><button class="btn btn-primary btn-lg" data-act="novo">${icon('plus')}Novo projeto</button><button class="btn btn-secondary btn-lg" data-act="pick-folder">${icon('folder')}Escolher pasta</button><button class="btn btn-secondary btn-lg" data-act="demo">${icon('sparkle')}Ver o exemplo</button></div></div></section>
         ${atalhos(null)}
         <div class="pn-colunas">${aparelhos({ porAparelho: [] }, dark)}${recentes()}</div>
       </div>`
@@ -229,7 +229,7 @@ export default {
     const st = p.result ? p.result.stats : null
     const lead = S.sync.running ? 'Sincronizando agora. Pode continuar usando o app.' : st ? (st.unsynced ? `${st.total - st.unsynced} de ${st.total} clipes na linha do tempo. ${plural(st.unsynced, 'ficou', 'ficaram')} de fora para você conferir.` : `${st.total} clipes no lugar, prontos para o editor.`) : `${plural(D.ready.length, 'clipe', 'clipes')} reconhecidos. Falta sincronizar.`
     return `<div class="page page-painel tela">
-      <header class="pn-ola" style="--i:0"><h1>${saudacao()}.</h1><p class="page-lead">${lead}</p>${tipoLinha(p)}</header>
+      <header class="pn-ola pn-ola-acoes" style="--i:0"><div><h1>${saudacao()}.</h1><p class="page-lead">${lead}</p>${tipoLinha(p)}</div><div class="pn-acoes"><button class="btn btn-secondary" data-act="fechar" title="Ele continua salvo em Projetos">${icon('close')}Fechar projeto</button><button class="btn btn-primary" data-act="novo">${icon('plus')}Novo projeto</button></div></header>
       ${cartoes(p, D, dark)}
       ${atalhos(p)}
       ${dicasTipo(p)}
