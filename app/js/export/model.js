@@ -2,7 +2,7 @@
 // por canal. Cada formato (XML, FCPXML, OTIO, EDL, ALE) só traduz este modelo.
 
 import { snapRate, rateFps, nominal, tcToFrames, labelSecondsToFrames, secToFrames } from '../time.js'
-import { PALETTE } from '../media/devices.js'
+import { devColor } from '../media/devices.js'
 
 export function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c])
@@ -62,9 +62,10 @@ const mostCommon = (pairs) => {
   return best ? best.v : null
 }
 
-const PREMIERE_LABELS = ['Cerulean', 'Violet', 'Forest', 'Mango', 'Rose', 'Caribbean', 'Yellow', 'Iris', 'Magenta', 'Teal', 'Tan', 'Lavender']
-export const deviceColor = (d) => PALETTE[(d && d.color) || 0]
-export const premiereLabel = (d) => PREMIERE_LABELS[(d && d.color) || 0]
+// mesma ordem das cores dos aparelhos (azul, laranja, verde-água, amarelo, rosa, verde, violeta, vermelho, cinza)
+const PREMIERE_LABELS = ['Cerulean', 'Mango', 'Caribbean', 'Yellow', 'Rose', 'Forest', 'Violet', 'Magenta', 'Tan']
+export const deviceColor = (d) => devColor(d)
+export const premiereLabel = (d) => PREMIERE_LABELS[Math.min(8, (d && d.color) || 0)]
 
 function channelsOf(clip) {
   if (!clip.audio) return 0
@@ -77,7 +78,7 @@ function channelsOf(clip) {
 export function buildTimelines(project, opts = project.export) {
   const byId = new Map(project.clips.map((c) => [c.id, c]))
   const devIndex = new Map(project.devices.map((d, i) => [d.id, i]))
-  const devOf = (c) => project.devices.find((d) => d.id === c.deviceId) || { id: 'x', label: 'Outros', kind: 'camera', color: 11 }
+  const devOf = (c) => project.devices.find((d) => d.id === c.deviceId) || { id: 'x', label: 'Outros', kind: 'camera', color: 8 }
   const sessions = opts.splitSessions === false ? mergeGroups(project.sessions) : project.sessions
   const out = []
   for (const s of sessions) {

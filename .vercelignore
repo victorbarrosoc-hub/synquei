@@ -1,0 +1,9 @@
+node_modules
+dist
+desktop
+build
+tests
+scripts
+.github
+electron-builder.yml
+package-lock.json

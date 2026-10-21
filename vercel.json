@@ -1,4 +1,8 @@
 {
+  "framework": null,
+  "installCommand": "echo sem dependências para o site",
+  "buildCommand": "echo sem build",
+  "outputDirectory": ".",
   "headers": [
     {
       "source": "/sw.js",
@@ -10,6 +14,32 @@
         {
           "key": "Service-Worker-Allowed",
           "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/instalar.sh",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    },
+    {
+      "source": "/instalar.ps1",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
         }
       ]
     },
@@ -34,6 +64,16 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/baixar/versao",
+      "destination": "/api/baixar?p=versao"
+    },
+    {
+      "source": "/baixar/:p",
+      "destination": "/api/baixar?p=:p"
     }
   ]
 }

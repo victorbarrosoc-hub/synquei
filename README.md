@@ -12,7 +12,8 @@
 
 | Aba | O que tem |
 | --- | --- |
-| **Projetos** | Soltar as pastas dos cartões, abrir o exemplo, abrir um `.synquei`, projetos recentes |
+| **Início** | Painel do projeto aberto: sincronia, confiança, material por aparelho, atalhos, dicas do tipo de projeto, recentes |
+| **Projetos** | Novo projeto com tipo, projetos separados por tipo (filtro e seções), soltar pastas, exemplo, `.synquei` |
 | **Mídia** | Clipes agrupados por aparelho (renomear, trocar o tipo, mover clipe), filtros, busca, todos os metadados de cada arquivo, arquivos ignorados |
 | **Sincronizar** | Método (som + timecode, só som, só timecode), timecode batido, data, ordem, deriva, rigor, sessões; andamento ao vivo e resultado |
 | **Linha do tempo** | Uma faixa por aparelho, cor por confiança, arrastar para ajustar, empurrar por quadro ou milissegundo, formas de onda sobrepostas para conferir |
@@ -21,6 +22,21 @@
 | **Ajustes** | Tema, padrões, atalhos, privacidade, dados |
 
 Visual claro com modo escuro automático; palcos e linha do tempo sempre escuros.
+
+### Tipos de projeto (`app/js/tipos.js`)
+
+Ao criar um projeto (pelo botão ou soltando as pastas), o Synquei pergunta o que está sendo gravado. Cada tipo ajusta a sincronia e a exportação e traz dicas de gravação; tudo continua editável.
+
+| Grupo | Tipos |
+| --- | --- |
+| Música | Videoclipe (takes sobre a música, sem ordem por aparelho, só som), Show ao vivo, DVD · Gravação ao vivo, EP · Sessão ao vivo |
+| Conversa e documentário | Entrevista, Podcast · Videocast, Documentário |
+| Conteúdo e ensino | Vídeo de conteúdo, Aula · Curso online |
+| Eventos | Casamento, Evento · Palestra, Culto · Celebração |
+| Ficção e publicidade | Curta · Filme · Série, Publicidade |
+| Outros | Teatro · Dança, Esporte · Ação, Outro |
+
+**Multicâmera** liga ou desliga por projeto (vem do tipo): Premiere recebe a sequência de ângulos aninhada numa sequência de edição (clique com o direito › Multicâmera › Ativar), Resolve 18+ e Final Cut recebem clipe multicâmera em FCPXML, Avid agrupa em multigroup pelo Auxiliary TC1.
 
 ## Como sincroniza (`app/js/sync/engine.js`)
 
@@ -59,8 +75,8 @@ O catálogo completo (contêineres, RAW, codecs, estruturas de cartão) está em
 
 | Destino | Arquivo | Detalhes |
 | --- | --- | --- |
-| Premiere Pro | XML do Final Cut 7 (xmeml v4) | uma sequência por sessão dentro de um projeto, vídeo e áudio vinculados, cor por aparelho, marcadores nos clipes para conferir |
-| DaVinci Resolve | xmeml por sessão + OTIO | importa como timeline |
+| Premiere Pro | XML do Final Cut 7 (xmeml v4) | uma sequência por sessão dentro de um projeto (multicâmera: ângulos aninhados numa sequência de edição), vídeo e áudio vinculados, cor por aparelho, marcadores nos clipes para conferir |
+| DaVinci Resolve | xmeml por sessão + OTIO (+ FCPXML multicâmera) | importa como timeline; multicâmera pelo .fcpxml no Resolve 18+ |
 | Final Cut Pro | FCPXML 1.10 | projeto em camadas + clipe multicâmera (um ângulo por aparelho); áudio sem vídeo com precisão de amostra (início no quadro, ajuste no corte de entrada) |
 | Avid Media Composer | ALE + EDL | tempo sincronizado no Auxiliary TC1 para agrupar |
 | Vegas Pro, Lightworks | xmeml por sessão | |
@@ -69,6 +85,32 @@ O catálogo completo (contêineres, RAW, codecs, estruturas de cartão) está em
 | Relatório | CSV + `.synquei` | o `.synquei` reabre o projeto |
 
 O caminho dos arquivos sai da **pasta da mídia** que você informa + o caminho relativo da pasta arrastada (o navegador não revela caminhos absolutos). No app de desktop (Electron), o caminho absoluto é usado direto.
+
+## App de desktop (Mac e Windows)
+
+O mesmo app, empacotado com Electron (`desktop/main.cjs`). Vantagens sobre o navegador:
+
+- **Caminho completo** de cada arquivo vai para as exportações: o editor acha a mídia sem revincular (a pasta da mídia nem aparece).
+- **AAC e H.264 sempre**: o Chromium do Electron traz os decodificadores (áudio de celular e GoPro, miniaturas).
+- Menu em português, atalhos (⌘O, ⌘1–5), janela integrada à barra lateral no Mac.
+
+Distribuição (mesmo modelo do SOBEDESCE):
+
+1. `.github/workflows/desktop.yml` gera o `.dmg` (universal, Apple Silicon e Intel) num Mac e o `.exe` (x64 e ARM) num Windows do GitHub, roda o teste de fumaça do app empacotado (`--smoke`: monta o exemplo, sincroniza, exporta) e publica no Release **"Synquei · app de desktop"** (tag `app-desktop`), com o build no nome e um `versao.json` com o SHA-256 de cada instalador.
+2. `api/baixar.js` (função da Vercel) atende `/baixar/mac`, `/baixar/windows` e `/baixar/versao` e manda direto para o arquivo do GitHub. **Repositório privado:** crie na Vercel a variável `GITHUB_TOKEN` (token fino, só leitura de *Contents* deste repositório).
+3. `instalar.sh` e `instalar.ps1`: instalação de uma linha, sem os avisos do macOS/Windows, conferindo o SHA-256:
+   - Mac: `curl -fsSL https://synquei.vercel.app/instalar.sh | bash`
+   - Windows: `irm https://synquei.vercel.app/instalar.ps1 | iex`
+
+Sem assinatura da Apple/Microsoft por enquanto (ad-hoc no Mac). O site ensina a abrir na primeira vez.
+
+```sh
+npm install
+npm run desktop          # abre o app de desktop
+npm run smoke            # teste de fumaça
+npm run dist:mac         # .dmg (num Mac)
+npm run dist:win         # .exe (no Windows)
+```
 
 ## Rodar local
 
@@ -90,5 +132,9 @@ app/                            o app (index.html, app.css, js/)
   js/export/                    xmeml, FCPXML, OTIO, EDL, ALE, CSV, ZIP
   js/views/                     uma tela por aba
 sw.js                           modo offline
+desktop/                        app de desktop (Electron)
+api/baixar.js                   /baixar/* na Vercel
+instalar.sh, instalar.ps1       instalação de uma linha
+.github/workflows/desktop.yml   instaladores no GitHub Actions
 tests/                          node --test
 ```

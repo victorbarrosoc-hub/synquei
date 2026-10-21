@@ -13,6 +13,7 @@ export const TARGETS = [
     short: 'Premiere',
     file: 'XML (Final Cut 7)',
     steps: ['Arquivo › Importar…', 'Escolha o .xml do Synquei', 'Cada sessão vira uma sequência dentro de uma pasta', 'Mídia offline? Clique com o direito › Vincular mídia'],
+    stepsMc: ['Arquivo › Importar…', 'Escolha o .xml do Synquei', 'Abra a sequência “· multicâmera” de cada sessão', 'Clique com o direito no clipe › Multicâmera › Ativar', 'Corte ao vivo pelo Monitor de programa (Shift+0)'],
   },
   {
     id: 'resolve',
@@ -20,13 +21,15 @@ export const TARGETS = [
     short: 'Resolve',
     file: 'XML por sessão + OTIO',
     steps: ['File › Import › Timeline…', 'Escolha o .xml (ou o .otio) da sessão', 'Marque "Automatically import source clips into media pool"', 'Se pedir, aponte a pasta da mídia'],
+    stepsMc: ['Resolve 18 ou mais novo', 'File › Import › Timeline… › o .fcpxml “multicâmera”', 'Cada sessão chega como clipe multicâmera na Media Pool', 'Camadas soltas: importe o .xml da sessão'],
   },
   {
     id: 'fcp',
     name: 'Final Cut Pro',
     short: 'Final Cut',
     file: 'FCPXML 1.10',
-    steps: ['Arquivo › Importar › XML…', 'Escolha o .fcpxml', 'Cada sessão vira um projeto com camadas e um clipe multicâmera', 'Mídia faltando? Arquivo › Revincular arquivos'],
+    steps: ['Arquivo › Importar › XML…', 'Escolha o .fcpxml', 'Cada sessão vira um projeto com os aparelhos em camadas', 'Mídia faltando? Arquivo › Revincular arquivos'],
+    stepsMc: ['Arquivo › Importar › XML…', 'Escolha o .fcpxml', 'Cada sessão vira um clipe multicâmera (um ângulo por aparelho)', 'Abra o Visualizador de ângulos e corte ao vivo'],
   },
   {
     id: 'avid',
@@ -34,6 +37,7 @@ export const TARGETS = [
     short: 'Avid',
     file: 'ALE + EDL',
     steps: ['Vincule a mídia (Source Browser › Link)', 'Clique com o direito no bin › Input › Shot Log (.ale) com Merge events', 'O Auxiliary TC1 traz o tempo sincronizado', 'Selecione tudo › Group Clips › Auxiliary TC1'],
+    stepsMc: ['Vincule a mídia e faça o Merge do .ale no bin', 'O Auxiliary TC1 traz o tempo sincronizado', 'Selecione tudo › Clip › Multigroup… › Auxiliary TC1', 'Carregue o multigroup e corte em Multicamera mode'],
   },
   {
     id: 'vegas',
@@ -70,16 +74,20 @@ export function filesFor(target, project) {
   const base = safeName(project.name)
   const tls = buildTimelines(project)
   if (!tls.length) return []
+  const mc = project.export.multicam !== false
   switch (target) {
     case 'premiere':
-      return [{ name: `${base} · Premiere Pro.xml`, data: toXmeml(tls, project, { wrap: true }) }]
+      return [{ name: `${base} · Premiere Pro${mc ? ' · multicâmera' : ''}.xml`, data: toXmeml(tls, project, { wrap: true, multicam: mc }) }]
     case 'resolve':
-      return tls.flatMap((tl) => [
-        { name: `${base} · ${safeName(tl.name)} · Resolve.xml`, data: toXmeml([tl], project, { wrap: false }) },
-        { name: `${base} · ${safeName(tl.name)} · Resolve.otio`, data: toOtio(tl, project) },
-      ])
+      return [
+        ...tls.flatMap((tl) => [
+          { name: `${base} · ${safeName(tl.name)} · Resolve.xml`, data: toXmeml([tl], project, { wrap: false }) },
+          { name: `${base} · ${safeName(tl.name)} · Resolve.otio`, data: toOtio(tl, project) },
+        ]),
+        ...(mc ? [{ name: `${base} · Resolve multicâmera.fcpxml`, data: toFcpxml(tls, { ...project, export: { ...project.export, fcp: 'multicam' } }) }] : []),
+      ]
     case 'fcp':
-      return [{ name: `${base} · Final Cut Pro.fcpxml`, data: toFcpxml(tls, project) }]
+      return [{ name: `${base} · Final Cut Pro.fcpxml`, data: toFcpxml(tls, mc ? project : { ...project, export: { ...project.export, fcp: 'timeline' } }) }]
     case 'avid':
       return tls.flatMap((tl) => [{ name: `${base} · ${safeName(tl.name)} · Avid.ale`, data: toAle(tl, project) }, ...tl.video.map((t, i) => ({ name: `${base} · ${safeName(tl.name)} · V${i + 1} ${safeName(t.label)}.edl`, data: toEdl(tl, t, 'V') }))])
     case 'vegas':

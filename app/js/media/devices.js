@@ -6,7 +6,11 @@ import { CARD_LAYOUTS, NAME_PATTERNS } from './formats.js'
 
 const GENERIC_DIRS = /^(DCIM|PRIVATE|M4ROOT|CLIP|CLIPS\d*|XDROOT|CONTENTS|AVCHD|BDMV|STREAM|\d{3}[A-Z_]+|DJI_\d+|\d{3}MEDIA|FOLDER\d+|MISC|Camera\d+|\d{8})$/i
 
-export const PALETTE = ['#0a84ff', '#bf5af2', '#30d158', '#ff9f0a', '#ff375f', '#40c8e0', '#ffd60a', '#5e5ce6', '#ff453a', '#63e6e2', '#ac8e68', '#8e8e93']
+// Cor de cada aparelho: paleta categórica validada para daltonismo (ordem fixa, nunca reciclada). Do 9º aparelho em
+// diante, todos ficam no cinza "outros". Versão clara para superfícies claras; escura para os palcos e o tema escuro.
+export const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948', '#8e8e93']
+export const PALETTE_DARK = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767', '#8e8e93']
+export const devColor = (d, dark = false) => (dark ? PALETTE_DARK : PALETTE)[Math.min(8, d && d.color != null ? d.color : 8)]
 
 function hint(relPath, name) {
   for (const c of CARD_LAYOUTS) if (c.re.test(relPath)) return c
@@ -83,7 +87,7 @@ export function groupDevices(clips) {
   const assign = {}
   list.forEach(({ g, kind }, i) => {
     const id = 'd' + (i + 1)
-    devices.push({ id, label: g.label, kind, brand: g.brand, model: g.model, color: i % PALETTE.length, key: g.key })
+    devices.push({ id, label: g.label, kind, brand: g.brand, model: g.model, color: Math.min(i, 8), key: g.key })
     for (const c of g.clips) assign[c.id] = id
   })
   return { devices, assign }

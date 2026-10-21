@@ -1,5 +1,7 @@
 // Ajudantes da interface.
 
+import { sfx } from './sfx.js'
+
 export const $ = (s, r = document) => r.querySelector(s)
 export const $$ = (s, r = document) => [...r.querySelectorAll(s)]
 
@@ -40,6 +42,7 @@ export function ago(ms) {
 export function toast(msg, { icon: ic = 'check', ms = 3200 } = {}) {
   const box = document.getElementById('toasts')
   if (!box) return
+  if (ic === 'warn') sfx.error()
   const el = document.createElement('div')
   el.className = 'toast'
   el.innerHTML = `${icon(ic)}<span>${h(msg)}</span>`
@@ -53,6 +56,7 @@ export function toast(msg, { icon: ic = 'check', ms = 3200 } = {}) {
 export function download(data, name, type = 'application/octet-stream') {
   const blob = data instanceof Blob ? data : new Blob([data], { type })
   const url = URL.createObjectURL(blob)
+  sfx.export()
   const a = document.createElement('a')
   a.href = url
   a.download = name
@@ -138,4 +142,11 @@ export function confColor(c, method) {
   if (c >= 0.75) return '#30d158'
   if (c >= 0.5) return '#ffd60a'
   return '#ff9f0a'
+}
+
+/** O app está no tema escuro agora? (escolha do usuário ou do sistema) */
+export function uiDark() {
+  const t = document.documentElement.dataset.theme
+  if (t) return t === 'dark'
+  return matchMedia('(prefers-color-scheme: dark)').matches
 }

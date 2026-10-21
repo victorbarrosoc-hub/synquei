@@ -1,0 +1,159 @@
+# Gera o app de desktop num Mac e num Windows de verdade (na nuvem do GitHub) e publica no Release
+# "Synquei · app de desktop" (tag app-desktop). O site entrega por /baixar/mac e /baixar/windows.
+# Roda na main quando o app muda, em tags v* e pelo botão "Run workflow". Pull requests só testam (sem publicar).
+name: App de desktop
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "app/**"
+      - "desktop/**"
+      - "build/**"
+      - "icons/**"
+      - "package.json"
+      - "package-lock.json"
+      - "electron-builder.yml"
+      - "scripts/release.mjs"
+      - ".github/workflows/desktop.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "desktop/**"
+      - "electron-builder.yml"
+      - "package.json"
+      - ".github/workflows/desktop.yml"
+  workflow_dispatch:
+
+# Só leitura por padrão; escrita só nos jobs que publicam no Release.
+# As actions de fora vão fixadas pelo SHA do commit (com a tag ao lado).
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testes:
+    name: Testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg libxml2-utils unzip
+      - run: npm ci
+      - run: npm test
+
+  app:
+    name: App (${{ matrix.label }})
+    needs: testes
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: Mac
+            plataforma: mac
+            build: npm run dist:mac
+          - os: windows-latest
+            label: Windows
+            plataforma: windows
+            build: npm run dist:win
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      CSC_FOR_PULL_REQUEST: "true"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: ${{ matrix.build }}
+      # Teste de fumaça do app empacotado (desktop/main.cjs --smoke): abre o app de verdade, monta o projeto de exemplo,
+      # sincroniza pelo som, exporta e escreve "SMOKE OK". Qualquer outra coisa falha antes de publicar.
+      - if: matrix.plataforma == 'mac'
+        name: Teste de fumaça (Mac)
+        timeout-minutes: 6
+        run: |
+          export SYNQUEI_SMOKE_SAIDA="$RUNNER_TEMP/smoke.txt"
+          code=0
+          dist/mac-universal/Synquei.app/Contents/MacOS/Synquei --smoke || code=$?
+          echo "--- resultado (saída $code) ---"
+          cat "$SYNQUEI_SMOKE_SAIDA" || true
+          test "$code" -eq 0
+          grep -q '^SMOKE OK$' "$SYNQUEI_SMOKE_SAIDA"
+      - if: matrix.plataforma == 'windows'
+        name: Teste de fumaça (Windows)
+        timeout-minutes: 6
+        shell: pwsh
+        run: |
+          $env:SYNQUEI_SMOKE_SAIDA = Join-Path $env:RUNNER_TEMP 'smoke.txt'
+          $p = Start-Process -FilePath 'dist\win-unpacked\Synquei.exe' -ArgumentList '--smoke' -PassThru
+          $null = $p.Handle
+          if (-not $p.WaitForExit(240000)) { $p.Kill($true); Write-Error 'o teste de fumaça passou de 4 minutos'; exit 1 }
+          Write-Output "--- resultado (saída $($p.ExitCode)) ---"
+          Get-Content $env:SYNQUEI_SMOKE_SAIDA -ErrorAction SilentlyContinue
+          if ($p.ExitCode -ne 0) { exit 1 }
+          if (-not (Select-String -Path $env:SYNQUEI_SMOKE_SAIDA -Pattern '^SMOKE OK$' -Quiet)) { exit 1 }
+      # O SHA-256 vai para o Release junto do instalador (artefatos do Actions têm cota de armazenamento).
+      - if: github.event_name != 'pull_request'
+        run: node scripts/release.mjs nomear ${{ matrix.plataforma }} dist dist
+      - if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: app-desktop
+          name: Synquei · app de desktop
+          target_commitish: ${{ github.sha }}
+          files: |
+            dist/Synquei-*-mac-universal.dmg
+            dist/Synquei-*-windows-setup.exe
+            dist/Synquei-sha256-*.json
+          fail_on_unmatched_files: false
+          body: Instaladores gerados automaticamente a partir da main. Sem assinatura da Apple/Microsoft por enquanto; o site ensina a instalar (synquei.vercel.app/#baixar).
+
+  # Depois dos DOIS instaladores no Release: o versao.json com o SHA-256 de cada um (o site serve em /baixar/versao).
+  versao:
+    name: Publicar versão
+    if: github.event_name != 'pull_request'
+    needs: app
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - run: gh release download app-desktop -R "$GITHUB_REPOSITORY" -p "Synquei-sha256-b${GITHUB_RUN_NUMBER}-*.json" -D sha256
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: node scripts/release.mjs versao sha256 versao.json
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: app-desktop
+          name: Synquei · app de desktop
+          target_commitish: ${{ github.sha }}
+          files: versao.json
+          fail_on_unmatched_files: true
+          body: Instaladores gerados automaticamente a partir da main. Sem assinatura da Apple/Microsoft por enquanto; o site ensina a instalar (synquei.vercel.app/#baixar).
+      - run: node scripts/release.mjs limpar ${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

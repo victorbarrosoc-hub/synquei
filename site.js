@@ -2,6 +2,7 @@
 // demonstrações e as abas de exportação. Cada laço só roda enquanto está na tela; com "reduzir movimento", tudo para.
 
 import { CONTAINERS, RAW, formatCount } from '/app/js/media/formats.js'
+import { TIPOS, GRUPOS } from '/app/js/tipos.js'
 
 const $ = (s, r = document) => r.querySelector(s)
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s))
@@ -314,9 +315,9 @@ const xml = (s) =>
 const USES = {
   premiere: {
     title: 'Adobe Premiere Pro',
-    text: 'Um XML com uma sequência por sessão, cada câmera numa faixa de vídeo e cada canal do gravador numa faixa de áudio. Vídeo e áudio de cada clipe chegam vinculados.',
-    specs: [['Arquivo', '.xml (Final Cut 7)'], ['Cores', 'uma por aparelho'], ['Marcadores', 'clipes para conferir']],
-    steps: ['Arquivo › Importar…', 'Escolha o .xml do Synquei', 'A sequência abre com tudo no lugar'],
+    text: 'Um XML com uma sequência por sessão, cada câmera numa faixa de vídeo e cada canal do gravador numa faixa de áudio. Com multicâmera ligado, os ângulos chegam aninhados numa sequência de edição.',
+    specs: [['Arquivo', '.xml (Final Cut 7)'], ['Multicâmera', 'sequência aninhada'], ['Cores', 'uma por aparelho']],
+    steps: ['Arquivo › Importar…', 'Escolha o .xml do Synquei', 'Multicâmera: clique com o direito no clipe › Multicâmera › Ativar'],
     code: xml(`<clipitem id="clipitem-4">
   <name>C0042.MP4</name>
   <start>1031</start>
@@ -330,8 +331,8 @@ const USES = {
   },
   resolve: {
     title: 'DaVinci Resolve',
-    text: 'Um XML por sessão (e um OTIO, se preferir). O Resolve monta a linha do tempo e já traz os clipes para o Media Pool.',
-    specs: [['Arquivos', '.xml + .otio'], ['Precisão', 'amostra no OTIO'], ['Início', 'TC real ou 01:00']],
+    text: 'Um XML por sessão (e um OTIO, se preferir). O Resolve monta a linha do tempo e já traz os clipes para o Media Pool. Com multicâmera, vai junto um .fcpxml com o clipe multicâmera.',
+    specs: [['Arquivos', '.xml + .otio + .fcpxml'], ['Multicâmera', 'Resolve 18 ou mais novo'], ['Início', 'TC real ou 01:00']],
     steps: ['File › Import › Timeline…', 'Escolha o .xml da sessão', 'Marque "import source clips into media pool"'],
     code: xml(`<sequence id="sequence-1">
   <name>Sessão 1 · 01 de mai, 14:22</name>
@@ -362,7 +363,7 @@ const USES = {
     title: 'Avid Media Composer',
     text: 'Um ALE com o tempo sincronizado no Auxiliary TC1, mais uma EDL por câmera. No Avid, junte o ALE aos clipes e agrupe pelo Aux TC.',
     specs: [['Arquivos', '.ale + .edl'], ['Agrupar', 'Auxiliary TC1'], ['Metadados', 'cena, take, câmera']],
-    steps: ['Vincule a mídia (Source Browser › Link)', 'Input › Shot Log, com Merge events', 'Group Clips › Auxiliary TC1'],
+    steps: ['Vincule a mídia (Source Browser › Link)', 'Input › Shot Log, com Merge events', 'Group Clips ou Multigroup › Auxiliary TC1'],
     code: E(`Heading
 FIELD_DELIM\tTABS
 FPS\t23.976
@@ -443,6 +444,67 @@ if (panel) {
   })
 }
 
+// ───────────── tipos de projeto ─────────────
+const lista = $('#tiposLista')
+const painel = $('#tipoPainel')
+if (lista && painel) {
+  const H = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+  const ic = (n) => `<svg class="icon" aria-hidden="true"><use href="#i-${n}"/></svg>`
+  // o que o tipo muda, dito em português
+  const ajustes = (t) => {
+    const s = t.sync
+    const out = []
+    if (s.mode === 'audio') out.push('Só pelo som: timecode e data não interferem')
+    if (s.chronological === false) out.push('Takes do mesmo aparelho podem se sobrepor')
+    if (s.drift) out.push('Correção de deriva para gravações longas')
+    if (s.sessionGap === 0) out.push('Tudo numa sequência só')
+    else if (s.sessionGap) out.push(`Nova sequência depois de ${s.sessionGap} min de pausa`)
+    if (s.useDate) out.push('Clipes sem som entram pela data e hora')
+    if (s.minConf != null && s.minConf < 0.4) out.push('Aceita mais clipes em ambiente barulhento')
+    if (s.minConf != null && s.minConf > 0.4) out.push('Mais rigor para evitar encaixe errado')
+    if (!out.length) out.push('Ajustes equilibrados para qualquer gravação')
+    return out
+  }
+  lista.innerHTML = GRUPOS.map((g) => `<div class="tg"><p>${H(g.label)}</p><div>${TIPOS.filter((t) => t.grupo === g.id).map((t) => `<button role="tab" class="tp is-${t.tom}" data-t="${t.id}" aria-selected="false">${ic(t.icon)}${H(t.label)}</button>`).join('')}</div></div>`).join('')
+  const btns = $$('[data-t]', lista)
+  let atual = null
+  let auto = true
+  const render = (id) => {
+    const t = TIPOS.find((x) => x.id === id)
+    atual = id
+    btns.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.t === id)))
+    painel.className = `tipo-painel is-${t.tom}`
+    painel.innerHTML = `<div class="tpp-topo"><span class="tpp-ic">${ic(t.icon)}</span><div><h3>${H(t.label)}</h3><p>${H(t.resumo)}</p></div><span class="tpp-mc ${t.multicam ? 'on' : ''}">${ic('multicam')}${t.multicam ? 'Multicâmera ligado' : 'Multicâmera opcional'}</span></div>
+      <div class="tpp-cols"><div><p class="tpp-eb">O que o Synquei ajusta</p><ul class="tpp-aj">${ajustes(t).map((a) => `<li>${ic('check')}${H(a)}</li>`).join('')}</ul></div><div><p class="tpp-eb">Dicas de gravação</p><ol class="tpp-dicas">${t.dicas.map((d) => `<li>${H(d)}</li>`).join('')}</ol></div></div>`
+  }
+  const show = (id) => {
+    if (id === atual) return
+    if (reduce) return render(id)
+    painel.classList.add('swap')
+    setTimeout(() => {
+      render(id)
+      painel.classList.remove('swap')
+    }, 220)
+  }
+  lista.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-t]')
+    if (!b) return
+    auto = false
+    show(b.dataset.t)
+  })
+  render('videoclipe')
+  const ordem = ['videoclipe', 'show', 'dvd', 'entrevista', 'casamento', 'conteudo', 'podcast', 'culto', 'ficcao']
+  let tt = 0
+  loop(painel, (dt) => {
+    if (!auto) return
+    tt += dt
+    if (tt > 4.5) {
+      tt = 0
+      show(ordem[(ordem.indexOf(atual) + 1) % ordem.length] || 'videoclipe')
+    }
+  })
+}
+
 // ───────────── nuvem de formatos ─────────────
 const cloud = $('#cloud')
 if (cloud) {
@@ -456,4 +518,30 @@ if (cloud) {
   for (const r of RAW) for (const e of r.ext) add(e, r.id !== 'seq' && e !== 'mov' && e !== 'mxf')
   for (const c of CONTAINERS) for (const e of c.ext) add(e, false)
   cloud.innerHTML = items.slice(0, 64).join('')
+}
+
+// ───────────── baixar: copiar o comando e aviso de instalador ainda sendo gerado ─────────────
+for (const b of $$('[data-copy]')) {
+  b.addEventListener('click', async () => {
+    const txt = document.getElementById(b.dataset.copy).textContent
+    try {
+      await navigator.clipboard.writeText(txt)
+    } catch {
+      const r = document.createRange()
+      r.selectNodeContents(document.getElementById(b.dataset.copy))
+      getSelection().removeAllRanges()
+      getSelection().addRange(r)
+      document.execCommand('copy')
+    }
+    b.classList.add('ok')
+    b.lastChild.textContent = 'Copiado'
+    setTimeout(() => {
+      b.classList.remove('ok')
+      b.lastChild.textContent = 'Copiar'
+    }, 1800)
+  })
+}
+if (new URLSearchParams(location.search).get('baixar') === 'indisponivel') {
+  const a = $('#baixarAviso')
+  if (a) a.hidden = false
 }

@@ -1,9 +1,9 @@
 // Mídia: o que foi reconhecido, separado por aparelho. Renomear grupo, mover clipe, ver todos os metadados.
 
 import { S, changed, peaksOf, hasMedia } from '../store.js'
-import { h, icon, bytes, plural, drawPeaks, $$ } from '../util.js'
+import { h, icon, bytes, plural, drawPeaks, $$, uiDark } from '../util.js'
 import { duration, rateLabel } from '../time.js'
-import { PALETTE, KIND_LABEL } from '../media/devices.js'
+import { devColor, KIND_LABEL } from '../media/devices.js'
 import { regroup, methodLabel } from '../project.js'
 import { go } from '../main.js'
 
@@ -76,7 +76,7 @@ function row(c, i, color) {
 }
 
 function deviceCard(d, clips, i) {
-  const color = PALETTE[d.color % PALETTE.length]
+  const color = devColor(d, uiDark())
   const total = clips.reduce((s, c) => s + (c.duration || 0), 0)
   const models = [...new Set(clips.map((c) => c.device && c.device.model).filter(Boolean))]
   return `<section class="card dev" style="--c:${color};animation:rise .5s var(--ease) both;animation-delay:${i * 50}ms">
@@ -172,7 +172,7 @@ export default {
       ${missing && !pr.active ? `<div class="info-box" style="margin-bottom:16px">${icon('link')}<div><b>${plural(missing, 'clipe sem mídia', 'clipes sem mídia')} nesta sessão.</b> Solte as mesmas pastas para religar (o Synquei acha cada arquivo pelo caminho e pelo tamanho). A exportação funciona mesmo assim.</div></div>` : ''}
       <div class="toolbar"><div class="seg" role="group" aria-label="Filtro">${seg}</div><span class="grow"></span><label class="search">${icon('search')}<input class="input" type="search" placeholder="Buscar clipe, codec, câmera" value="${h(S.ui.query)}" data-input="query" /></label></div>
       ${groups.map(([d, cs], i) => deviceCard(d, cs, i)).join('')}
-      ${loose.length ? deviceCard({ id: '', label: 'Sem aparelho', kind: 'camera', color: 11 }, loose, groups.length) : ''}
+      ${loose.length ? deviceCard({ id: '', label: 'Sem aparelho', kind: 'camera', color: 8 }, loose, groups.length) : ''}
       ${!groups.length && !loose.length ? `<div class="empty"><h2>Nada com esse filtro</h2></div>` : ''}
       ${p.ignored.length ? `<details class="ignored"><summary>${plural(p.ignored.length, 'arquivo ficou de fora', 'arquivos ficaram de fora')} (miniaturas, metadados, sistema)</summary><ul>${p.ignored.slice(0, 400).map((i) => `<li>${h(i.relPath)} — <span>${h(i.why)}</span></li>`).join('')}</ul></details>` : ''}
     </div>${sel ? drawer(sel) : ''}`
@@ -241,7 +241,7 @@ export default {
         let n = 1
         while (p.devices.some((d) => d.id === 'd' + n)) n++
         id = 'd' + n
-        p.devices.push({ id, label: `Aparelho ${p.devices.length + 1}`, kind: c.kind === 'audio' ? 'recorder' : 'camera', color: (n - 1) % 12, manual: true })
+        p.devices.push({ id, label: `Aparelho ${p.devices.length + 1}`, kind: c.kind === 'audio' ? 'recorder' : 'camera', color: Math.min(n - 1, 8), manual: true })
       }
       c.deviceId = id
       c.deviceLocked = true
