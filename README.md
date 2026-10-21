@@ -16,7 +16,7 @@
 | **Projetos** | Novo projeto com tipo, projetos separados por tipo (filtro e seções), soltar pastas, exemplo, `.synquei` |
 | **Mídia** | Clipes agrupados por aparelho (renomear, trocar o tipo, mover clipe), filtros, busca, todos os metadados de cada arquivo, arquivos ignorados |
 | **Sincronizar** | Método (som + timecode, só som, só timecode), timecode batido, data, ordem, deriva, rigor, sessões; andamento ao vivo e resultado |
-| **Linha do tempo** | Uma faixa por aparelho, cor por confiança, arrastar para ajustar, empurrar por quadro ou milissegundo, formas de onda sobrepostas para conferir |
+| **Linha do tempo** | Agulha com timecode (arrastar pela régua, setas, Home/End), monitor com a câmera em grande e os outros ângulos, play com o som do gravador (espaço), tela cheia (F); uma faixa por aparelho, cor por confiança, arrastar para ajustar, empurrar por quadro ou milissegundo, formas de onda sobrepostas |
 | **Exportar** | Premiere, Resolve, Final Cut, Avid, Vegas/Lightworks, OTIO, EDL, relatório; pasta da mídia, fps, resolução, TC de início, áudio da câmera, canais do gravador; tudo num `.zip` |
 | **Formatos** | Catálogo pesquisável do que é reconhecido |
 | **Ajustes** | Tema, padrões, atalhos, privacidade, dados |

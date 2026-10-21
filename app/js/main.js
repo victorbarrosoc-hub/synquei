@@ -1,10 +1,10 @@
 // Synquei — app. Módulos ES sem build: rotas por hash, uma tela por aba, eventos delegados.
 
-import { S, on, changed, loadIndex, addEntries, runSync, save, createProject, applyType } from './store.js'
+import { S, on, changed, loadIndex, addEntries, runSync, save, createProject, applyType, closeProject } from './store.js'
 import { escolherTipo } from './tipo-picker.js'
 import { tipoDe } from './tipos.js'
 import { entriesFromDrop, entriesFromInput } from './media/scan.js'
-import { $, $$, h, icon, toast, plural, download, uiDark } from './util.js'
+import { $, $$, h, icon, toast, plural, download, uiDark, modal } from './util.js'
 import { sfx } from './sfx.js'
 import { devColor } from './media/devices.js'
 import { zipAll } from './export/index.js'
@@ -114,7 +114,7 @@ function chrome() {
   const card = $('#projCard')
   if (card) {
     const html = p
-      ? `<a class="proj-card" href="#/inicio"><b>${h(p.name)}</b><span class="sub">${plural(p.clips.length, 'clipe', 'clipes')}${p.result ? ` · ${p.result.stats.total - p.result.stats.unsynced} na linha` : ''}</span><span class="dots">${p.devices.map((d) => `<i class="dot" style="--c:${devColor(d, uiDark())}" title="${h(d.label)}"></i>`).join('')}</span></a>`
+      ? `<div class="proj-card"><a class="proj-card-link" href="#/inicio"><span class="eyebrow">Projeto aberto</span><b>${h(p.name)}</b><span class="sub">${plural(p.clips.length, 'clipe', 'clipes')}${p.result ? ` · ${p.result.stats.total - p.result.stats.unsynced} na linha` : ''}</span><span class="dots">${p.devices.map((d) => `<i class="dot" style="--c:${devColor(d, uiDark())}" title="${h(d.label)}"></i>`).join('')}</span></a><button class="proj-fechar" data-act="fechar" title="Fechar este projeto (ele continua em Projetos)">${icon('close')}Fechar projeto</button></div>`
       : ''
     if (card.innerHTML !== html) card.innerHTML = html
   }
@@ -212,6 +212,7 @@ document.addEventListener('click', (e) => {
   if (act === 'pick-files') return pick('#pickFiles')
   if (act === 'novo') return novoProjeto()
   if (act === 'tipo') return pedirTipo(false)
+  if (act === 'fechar') return fecharProjeto()
   const v = VIEWS[S.route]
   if (v.acts && v.acts[act]) v.acts[act](el, e)
 })
@@ -245,8 +246,19 @@ for (const sel of ['#pickFolder', '#pickFiles']) {
   })
 }
 
+/** Fecha o projeto aberto; ele continua em Projetos. */
+function fecharProjeto() {
+  const p = S.project
+  if (!p) return go('projetos')
+  if (S.sync.running) return toast('Espere a sincronia terminar para fechar o projeto', { icon: 'warn' })
+  closeProject()
+  go('inicio', true)
+  toast(p.demo ? 'Exemplo fechado' : `${p.name} fechado. Ele continua em Projetos.`)
+}
+
 /** Projeto novo pelo botão: tipo e nome primeiro, pastas depois. */
 async function novoProjeto() {
+  if (S.sync.running) return toast('Espere a sincronia terminar para começar outro projeto', { icon: 'warn' })
   const r = await escolherTipo({ novo: true })
   if (!r) return
   createProject(r.name)
@@ -268,6 +280,19 @@ async function pedirTipo(novo) {
 
 async function importEntries(list) {
   if (!list.length) return
+  // pastas soltas com um projeto já sincronizado (ou o exemplo) aberto: provavelmente é outra gravação
+  if (S.project && S.project.demo) closeProject()
+  else if (S.project && S.project.result && !S.sync.running) {
+    const v = await modal({
+      title: 'Essas pastas são de outro projeto?',
+      body: `<b>${h(S.project.name)}</b> já está sincronizado. Comece um projeto novo ou junte estes arquivos a ele.`,
+      ok: 'Projeto novo',
+      alt: 'Juntar a este',
+      cancel: 'Cancelar',
+    })
+    if (!v) return
+    if (v === true) closeProject()
+  }
   sfx.pop()
   const novo = !S.project
   if (S.route === 'projetos' || S.route === 'inicio' || !S.project) go('midia')
@@ -323,6 +348,10 @@ addEventListener('drop', async (e) => {
 addEventListener('keydown', (e) => {
   const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)
   const mod = e.metaKey || e.ctrlKey
+  if (mod && !e.shiftKey && e.key.toLowerCase() === 'n') {
+    e.preventDefault()
+    return novoProjeto()
+  }
   if (mod && e.key.toLowerCase() === 'o') {
     e.preventDefault()
     return pick('#pickFolder')
@@ -372,6 +401,14 @@ addEventListener('resize', () => {
   }, 200)
 })
 addEventListener('beforeunload', () => save(true))
+// menu do app de desktop (Arquivo › Novo projeto, Fechar projeto)
+document.addEventListener('synquei:acao', (e) => {
+  if (e.detail === 'novo') novoProjeto()
+  else if (e.detail === 'fechar') fecharProjeto()
+})
+// atalho certo para cada sistema no botão Novo projeto
+const kbdNovo = $('.novo-btn kbd')
+if (kbdNovo) kbdNovo.textContent = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘N' : 'Ctrl+N'
 // no app de desktop a marca leva ao início (não ao site)
 if (window.synqueiDesktop) {
   const b = $('.brand')

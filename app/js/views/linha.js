@@ -8,6 +8,7 @@ import { nudge, methodLabel } from '../project.js'
 import { sfx } from '../sfx.js'
 import { duration, offsetLabel, rateFps, snapRate } from '../time.js'
 import { go } from '../main.js'
+import * as player from './linha-player.js'
 
 const LANE = 54
 let drag = null
@@ -57,9 +58,9 @@ function labelFn(s, clips) {
   }
   if (ref) {
     const base = ref.timecode.seconds - (ref.sync.pos - s.start)
-    return { tc: true, at: (t) => fmt(base + t) }
+    return { tc: true, base, at: (t) => fmt(base + t) }
   }
-  return { tc: false, at: (t) => fmt(t) }
+  return { tc: false, base: 0, at: (t) => fmt(t) }
 }
 
 function inspector(c, rate) {
@@ -102,7 +103,10 @@ export default {
     const clips = s ? s.clipIds.map((id) => byId.get(id)).filter((c) => c && c.sync) : []
     const rate = seqRate(clips)
     const span = s ? Math.max(1, s.end - s.start) : 1
-    const avail = Math.max(360, window.innerWidth - (innerWidth > 860 ? 232 : 0) - (innerWidth > 1180 ? 356 : 0) - 150 - (innerWidth > 860 ? 2 * Math.min(56, Math.max(24, innerWidth * 0.032)) : 32) - 4)
+    const cheia = document.body.classList.contains('tl-cheia')
+    const avail = cheia
+      ? Math.max(360, innerWidth - 150 - 32 - 4)
+      : Math.max(360, window.innerWidth - (innerWidth > 860 ? 232 : 0) - (innerWidth > 1180 ? 356 : 0) - 150 - (innerWidth > 860 ? 2 * Math.min(56, Math.max(24, innerWidth * 0.032)) : 32) - 4)
     const fit = avail / (span * 1.02)
     const pps = S.ui.zoom || fit
     const width = Math.ceil(span * pps * 1.02) + 40
@@ -114,18 +118,20 @@ export default {
     for (let t = 0; t <= span * 1.02; t += step) ticks.push(`<span style="left:${t * pps}px">${lab.at(t)}</span>`)
     const sel = S.ui.selected && byId.get(S.ui.selected)
     const loose = p.clips.filter((c) => c.status === 'ready' && !c.sync)
+    player.setCtx({ s, clips, rows, pps, span, rate, lab })
     const segs = p.sessions.length > 1 ? `<div class="seg" role="group" aria-label="Sessão">${p.sessions.map((x, i) => `<button data-act="session" data-i="${i}" aria-pressed="${i === Math.min(S.ui.session, p.sessions.length - 1)}">${h(x.name.split(' · ')[0])}${x.group > 0 ? ' *' : ''}</button>`).join('')}</div>` : ''
     return `<div class="page tela">
       <header class="page-head"><div><h1>Linha do tempo</h1><p class="page-lead">${s ? `${h(s.name)} · ${duration(span)} · ${plural(clips.length, 'clipe', 'clipes')}${lab.tc ? ' · régua no timecode real' : ''}` : 'Nenhuma sessão'}</p></div>
         <div class="page-actions">${segs}<button class="btn btn-primary" data-act="export">${icon('export')}Exportar</button></div></header>
       <div class="tl-wrap">
-        <div>
+        <div class="tl-edit">
+          ${s && rows.length ? player.monitorHtml() : ''}
           <section class="tl" style="--lane-h:${LANE}px">
-            <div class="tl-bar"><button class="icon-btn" data-act="zoom" data-v="0.66" aria-label="Afastar">${icon('zoom-out')}</button><input type="range" min="0" max="100" value="${Math.round(Math.log(pps / fit) / Math.log(60) * 100)}" data-input="zoom" aria-label="Zoom" data-fit="${fit}"/><button class="icon-btn" data-act="zoom" data-v="1.5" aria-label="Aproximar">${icon('zoom-in')}</button><button class="icon-btn" data-act="fit" aria-label="Caber na tela">${icon('fit')}</button><span style="margin-left:auto" class="num">${lab.tc ? 'Timecode' : 'Tempo'} · ${h(String(Math.round(rateFps(rate) * 1000) / 1000))} qps</span></div>
+            <div class="tl-bar"><button class="icon-btn" data-act="zoom" data-v="0.66" aria-label="Afastar">${icon('zoom-out')}</button><input type="range" min="0" max="100" value="${Math.round(Math.log(pps / fit) / Math.log(60) * 100)}" data-input="zoom" aria-label="Zoom" data-fit="${fit}"/><button class="icon-btn" data-act="zoom" data-v="1.5" aria-label="Aproximar">${icon('zoom-in')}</button><button class="tl-ajustar" data-act="fit" title="Mostrar a sessão inteira na largura da tela">${icon('fit')}Ajustar à largura</button><span style="margin-left:auto" class="num">${lab.tc ? 'Timecode' : 'Tempo'} · ${h(String(Math.round(rateFps(rate) * 1000) / 1000))} qps</span><button class="tl-ajustar" data-act="cheia" title="Tela cheia (F)">${icon(cheia ? 'shrink' : 'expand')}${cheia ? 'Sair' : 'Tela cheia'}</button></div>
             ${
               rows.length
                 ? `<div class="tl-body"><div class="tl-heads">${rows.map((r) => `<div class="tl-head" style="height:${r.lanes * LANE}px"><i class="dot" style="--c:${devColor(r.d, true)}"></i><span title="${h(r.d.label)}">${h(r.d.label)}</span></div>`).join('')}</div>
-              <div class="tl-scroll" id="tlScroll"><div style="width:${width}px;position:relative"><div class="tl-ruler">${ticks.join('')}</div>
+              <div class="tl-scroll" id="tlScroll"><div id="tlInner" style="width:${width}px;position:relative"><div class="tl-ruler" title="Clique ou arraste para mover a agulha">${ticks.join('')}</div>${player.needleHtml(pps)}
               ${rows
                 .map(
                   (r) =>
@@ -163,13 +169,29 @@ export default {
       sc.addEventListener('scroll', () => (S.ui.scroll = sc.scrollLeft), { passive: true })
       sc.addEventListener('pointerdown', onDown)
     }
+    player.mount(root)
   },
   acts: {
     session(el) {
+      player.pause()
       S.ui.session = +el.dataset.i
       S.ui.zoom = null
       S.ui.scroll = 0
+      S.ui.needle = 0
       changed()
+    },
+    tp(el) {
+      const v = el.dataset.v
+      if (v === 'play') player.toggle()
+      else if (v === 'inicio') player.toStart()
+      else if (v === 'fim') player.toEnd()
+      else player.step(+v)
+    },
+    angulo(el) {
+      player.setProgram(el.dataset.dev)
+    },
+    cheia() {
+      player.telaCheia()
     },
     zoom(el) {
       const r = $('[data-input="zoom"]')
@@ -207,7 +229,26 @@ export default {
     },
   },
   keys(e) {
+    if (!S.project || !S.project.result) return false
+    if (e.key === ' ') {
+      // o botão focado não pode receber o mesmo espaço (tocaria e pausaria de uma vez)
+      if (document.activeElement && document.activeElement.tagName === 'BUTTON') document.activeElement.blur()
+      player.toggle()
+      return true
+    }
+    if (e.key === 'f' || e.key === 'F') {
+      player.telaCheia()
+      return true
+    }
+    if (e.key === 'Home') return player.toStart(), true
+    if (e.key === 'End') return player.toEnd(), true
     const c = S.ui.selected && S.project.clips.find((x) => x.id === S.ui.selected)
+    // sem clipe selecionado, as setas andam com a agulha (Shift: um segundo)
+    if ((!c || !c.sync) && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      const fps = rateFps(seqRate(session().clipIds.map((id) => S.project.clips.find((x) => x.id === id)).filter(Boolean)))
+      player.step((e.key === 'ArrowLeft' ? -1 : 1) * (e.shiftKey ? Math.round(fps) : 1))
+      return true
+    }
     if (!c || !c.sync) return false
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       const s = session()
@@ -219,6 +260,7 @@ export default {
       return true
     }
     if (e.key === 'Escape') {
+      if (document.body.classList.contains('tl-cheia') && !S.ui.selected) return player.telaCheia(false), true
       S.ui.selected = null
       changed()
       return true
