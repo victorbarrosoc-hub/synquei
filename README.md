@@ -92,7 +92,8 @@ O mesmo app, empacotado com Electron (`desktop/main.cjs`). Vantagens sobre o nav
 
 - **Caminho completo** de cada arquivo vai para as exportações: o editor acha a mídia sem revincular (a pasta da mídia nem aparece).
 - **AAC e H.264 sempre**: o Chromium do Electron traz os decodificadores (áudio de celular e GoPro, miniaturas).
-- Menu em português, atalhos (⌘O, ⌘1–5), janela integrada à barra lateral no Mac.
+- Menu em português, atalhos (⌘N, ⌘O, ⌘1–6), janela integrada à barra lateral no Mac.
+- **Atualiza sozinho** (`desktop/atualizador.cjs`, mesmo esquema do SOBEDESCE): confere `/baixar/versao` ao abrir e a cada hora, baixa o instalador do build novo em segundo plano, confere o SHA-256 e mostra "Atualizar agora" na barra lateral; um script espera o app fechar, troca (Mac: `.dmg` montado e `ditto`; Windows: NSIS em silêncio) e abre de novo. Se a troca falhar, o app antigo volta e o aviso oferece o Baixar. O build do app vem de `desktop/build-info.json`, gravado pelo CI (`node scripts/release.mjs build-info`).
 
 Distribuição (mesmo modelo do SOBEDESCE):
 

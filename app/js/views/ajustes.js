@@ -3,6 +3,7 @@
 import { S, changed } from '../store.js'
 import { h, icon, toast, modal } from '../util.js'
 import { sfx, soundPrefs, setSoundPrefs } from '../sfx.js'
+import { temAtualizador, estadoAtualizacao, buildLabel } from '../atualizacao.js'
 
 const theme = () => {
   try {
@@ -17,6 +18,25 @@ const defaults = () => {
   } catch {
     return {}
   }
+}
+
+function versaoApp() {
+  const v = estadoAtualizacao()
+  const atual = v ? buildLabel(v.atual) : '…'
+  const nova = v && v.ultima && v.ultima.build > v.atual.build
+  const sub = !v
+    ? ''
+    : !v.atual.build
+      ? 'Versão de desenvolvimento: não procura atualizações.'
+      : nova
+        ? `Versão ${v.ultima.build} disponível${v.fase === 'pronto' ? ', baixada e pronta para instalar' : ''}.`
+        : v.verificadaEm
+          ? `Você está com a versão mais nova. Conferido ${new Date(v.verificadaEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`
+          : 'Confere sozinho ao abrir o app e a cada hora.'
+  return `<section class="card"><header class="card-head"><h2>Atualizações</h2></header><div class="card-pad">
+    <div class="set-row"><div><b>Synquei ${h(atual)}</b><small>${h(sub)}</small></div><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${nova && v.fase === 'pronto' ? '<button class="btn btn-primary btn-sm" data-act="atu-agora">Atualizar agora</button>' : ''}<button class="btn btn-secondary btn-sm" data-act="atu-verificar" ${v && v.atual.build ? '' : 'disabled'}>${icon('sync')}Procurar atualização</button></span></div>
+    <div class="set-row"><div><b>Como funciona</b><small>Quando sai uma versão nova, o app baixa e confere em segundo plano. Aí aparece "Atualizar agora" na barra lateral: ele fecha, troca e abre de novo, com seus projetos no lugar. Para isso ele só pergunta ao site qual é a versão mais nova; nada dos seus projetos sai do computador.</small></div></div>
+  </div></section>`
 }
 
 export default {
@@ -55,6 +75,7 @@ export default {
         <div class="set-row"><div><b>Empurrar clipe um quadro</b><small>Na linha do tempo. Com Option/Alt, 1 ms.</small></div><span><span class="kbd">←</span> <span class="kbd">→</span></span></div>
         <div class="set-row"><div><b>Trocar de aba</b><small>Início, Mídia, Sincronizar, Linha do tempo, Exportar.</small></div><span><span class="kbd">1</span> … <span class="kbd">5</span></span></div>
       </div></section>
+      ${temAtualizador() ? versaoApp() : ''}
       ${window.synqueiDesktop ? '' : `<section class="card"><header class="card-head"><h2>App de desktop</h2></header><div class="card-pad">
         <div class="set-row"><div><b>Synquei para Mac e Windows</b><small>No desktop, cada clipe vai com o caminho completo para o editor e o áudio de celular e GoPro funciona em qualquer máquina.</small></div><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><a class="btn btn-secondary btn-sm" href="/baixar/mac">${icon('download')}Mac</a><a class="btn btn-secondary btn-sm" href="/baixar/windows">${icon('download')}Windows</a></span></div>
         <div class="set-row"><div><b>Como instalar</b><small>Passo a passo e instalação sem aviso pelo Terminal.</small></div><a class="btn btn-ghost btn-sm" href="/#baixar" target="_blank" rel="noopener">Ver no site</a></div>
