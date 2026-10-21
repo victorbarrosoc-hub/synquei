@@ -86,6 +86,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Identidade do build (vai dentro do app): o aviso "Nova versão do Synquei" compara com o versao.json do site.
+      - run: node scripts/release.mjs build-info
       - run: ${{ matrix.build }}
       # Teste de fumaça do app empacotado (desktop/main.cjs --smoke): abre o app de verdade, monta o projeto de exemplo,
       # sincroniza pelo som, exporta e escreve "SMOKE OK". Qualquer outra coisa falha antes de publicar.

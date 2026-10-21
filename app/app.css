@@ -3746,3 +3746,106 @@ body.tl-cheia .mon-pgm,
 body.tl-cheia .mon-angs {
   max-height: 48vh;
 }
+
+/* ───────────── aviso de versão nova (app de desktop) ───────────── */
+.atu {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--blue) 8%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 28%, var(--hairline));
+  font-size: 12.5px;
+  animation: rise 0.45s var(--ease) both;
+}
+.atu-topo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.atu-topo b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.atu-marca {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: linear-gradient(135deg, var(--blue), var(--lav));
+  color: #fff;
+}
+.atu-marca .icon {
+  width: 12px;
+  height: 12px;
+}
+.atu-build {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.atu p {
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.atu-erro {
+  color: var(--err-text);
+}
+.atu-sub {
+  font-size: 11.5px;
+}
+.atu-acoes {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.atu-alt {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--text-3);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.atu-alt:hover {
+  color: var(--text);
+}
+.atu-prog {
+  display: grid;
+  gap: 6px;
+}
+.atu-barra {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  overflow: hidden;
+}
+.atu-barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--lav));
+  transition: width 0.3s var(--ease);
+}
+.atu-barra.is-indef span {
+  width: 40%;
+  animation: atu-indef 1.2s ease-in-out infinite;
+}
+@keyframes atu-indef {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+.sidebar {
+  overflow-y: auto;
+  scrollbar-width: none;
+}

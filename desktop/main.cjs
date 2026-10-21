@@ -4,10 +4,12 @@
 //
 // `--smoke` (CI, depois do build): abre o app, monta o projeto de exemplo, sincroniza, exporta e escreve "SMOKE OK".
 
-const { app, BrowserWindow, Menu, protocol, shell, session, dialog } = require('electron')
+const { app, BrowserWindow, Menu, protocol, shell, session, dialog, ipcMain } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
+const { spawn } = require('node:child_process')
+const { Atualizador, readBuildInfo, handoffCommand, isHandoffScript } = require('./atualizador.cjs')
 
 const SCHEME = 'synquei'
 const ROOT = path.join(__dirname, '..')
@@ -136,6 +138,66 @@ function menu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
+// ───────── atualização pelo próprio app (desktop/atualizador.cjs) ─────────
+let atu = null
+
+/** O atualizador preparou a troca: roda o script solto (ele espera o app fechar, troca e abre de novo) e fecha. */
+function runUpdateHandoff({ script }) {
+  return new Promise((resolve, reject) => {
+    const command = isHandoffScript(script) ? handoffCommand(process.platform, script) : null
+    if (!command) return reject(new Error('script de atualização inválido'))
+    let child
+    try {
+      child = spawn(command.cmd, command.args, { detached: true, stdio: 'ignore', windowsHide: true })
+    } catch (err) {
+      return reject(err)
+    }
+    child.once('error', reject)
+    // só fecha depois que o script de fato começou (senão o app fecharia sem ninguém para abrir de novo)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+      setTimeout(() => app.quit(), 150)
+    })
+  })
+}
+
+function iniciarAtualizador() {
+  atu = new Atualizador({
+    // só para testar o aviso fora do Mac/Windows (nunca no app empacotado)
+    platform: (!app.isPackaged && process.env.SYNQUEI_ATU_PLATAFORMA) || process.platform,
+    appExe: app.isPackaged ? process.execPath : '',
+    appPid: app.isPackaged ? process.pid : 0,
+    stateDir: app.getPath('userData'),
+    buildInfo: readBuildInfo(path.join(__dirname, 'build-info.json')),
+    handoff: runUpdateHandoff,
+    log: (...a) => console.log('[atualização]', ...a),
+  })
+  atu.on('change', (st) => {
+    if (win && !win.isDestroyed()) win.webContents.send('synquei:atualizacao', st)
+  })
+  // só a página do app (synquei://) fala com o atualizador
+  const daPagina = (e) => {
+    try {
+      return new URL(e.senderFrame.url).protocol === `${SCHEME}:`
+    } catch {
+      return false
+    }
+  }
+  const handle = (canal, fn) =>
+    ipcMain.handle(canal, async (e, ...a) => {
+      if (!daPagina(e)) throw new Error('não permitido')
+      return fn(...a)
+    })
+  handle('atu:status', () => atu.status())
+  handle('atu:verificar', () => atu.check())
+  handle('atu:aplicar', () => atu.aplicarAgora())
+  handle('atu:depois', () => atu.depois())
+  handle('atu:tentar', () => atu.tentar())
+  handle('atu:baixar', () => shell.openExternal(atu.status().baixarUrl))
+  atu.start()
+}
+
 // ───────── teste de fumaça ─────────
 async function smoke() {
   const lines = []
@@ -185,6 +247,7 @@ app.whenReady().then(() => {
   menu()
   createWindow()
   if (SMOKE) smoke()
+  else iniciarAtualizador()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -195,6 +258,10 @@ app.on('second-instance', () => {
     if (win.isMinimized()) win.restore()
     win.focus()
   }
+})
+
+app.on('before-quit', () => {
+  if (atu) atu.stop()
 })
 
 app.on('window-all-closed', () => {

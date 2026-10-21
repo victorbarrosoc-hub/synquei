@@ -6,6 +6,9 @@
 //       build seguinte não troca o arquivo que o site está entregando.
 //   node scripts/release.mjs versao <pasta-dos-sha> <versao.json>
 //       (a pasta vem do Release: gh release download app-desktop -p 'Synquei-sha256-b42-*') junta os dois SHA-256 no versao.json que o site serve em /baixar/versao (os instaladores de uma linha conferem).
+//   node scripts/release.mjs build-info
+//       grava desktop/build-info.json (vai dentro do app): o build deste app, que o aviso de versão nova compara com o
+//       versao.json do site (desktop/atualizador.cjs). Sem GITHUB_RUN_NUMBER fica 0 = versão de desenvolvimento.
 //   node scripts/release.mjs limpar <build>
 //       tira do Release os instaladores de builds antigos (fica o atual e os dois anteriores).
 
@@ -55,6 +58,18 @@ async function versao(pasta, out) {
   console.log(JSON.stringify(v))
 }
 
+async function buildInfo() {
+  let data = new Date().toISOString()
+  try {
+    const { execFileSync } = await import('node:child_process')
+    data = new Date(execFileSync('git', ['show', '-s', '--format=%cI', process.env.GITHUB_SHA || 'HEAD'], { encoding: 'utf8' }).trim()).toISOString()
+  } catch {}
+  const sha = String(process.env.GITHUB_SHA || '')
+  const info = { build: build(), commit: /^[0-9a-f]{7,40}$/i.test(sha) ? sha.slice(0, 7).toLowerCase() : '', data }
+  await fs.writeFile(path.join('desktop', 'build-info.json'), JSON.stringify(info) + '\n')
+  console.log(JSON.stringify(info))
+}
+
 async function limpar(atual) {
   const token = process.env.GITHUB_TOKEN
   if (!token) throw new Error('sem GITHUB_TOKEN')
@@ -72,9 +87,9 @@ async function limpar(atual) {
 }
 
 const [cmd, ...args] = process.argv.slice(2)
-const run = { nomear: () => nomear(...args), versao: () => versao(...args), limpar: () => limpar(Number(args[0])) }[cmd]
+const run = { nomear: () => nomear(...args), versao: () => versao(...args), limpar: () => limpar(Number(args[0])), 'build-info': () => buildInfo() }[cmd]
 if (!run) {
-  console.error('uso: release.mjs nomear|versao|limpar …')
+  console.error('uso: release.mjs nomear|versao|build-info|limpar …')
   process.exit(2)
 }
 run().catch((e) => {

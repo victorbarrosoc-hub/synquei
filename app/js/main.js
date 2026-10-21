@@ -3,6 +3,7 @@
 import { S, on, changed, loadIndex, addEntries, runSync, save, createProject, applyType, closeProject } from './store.js'
 import { escolherTipo } from './tipo-picker.js'
 import { tipoDe } from './tipos.js'
+import { iniciarAtualizacao, acoesAtualizacao } from './atualizacao.js'
 import { entriesFromDrop, entriesFromInput } from './media/scan.js'
 import { $, $$, h, icon, toast, plural, download, uiDark, modal } from './util.js'
 import { sfx } from './sfx.js'
@@ -213,6 +214,7 @@ document.addEventListener('click', (e) => {
   if (act === 'novo') return novoProjeto()
   if (act === 'tipo') return pedirTipo(false)
   if (act === 'fechar') return fecharProjeto()
+  if (acoesAtualizacao[act]) return acoesAtualizacao[act](el, e)
   const v = VIEWS[S.route]
   if (v.acts && v.acts[act]) v.acts[act](el, e)
 })
@@ -416,6 +418,9 @@ if (window.synqueiDesktop) {
 }
 loadIndex()
 render()
+iniciarAtualizacao()
+// Ajustes mostra a versão e o estado da atualização: redesenha quando muda
+document.addEventListener('synquei:atualizacao-mudou', () => S.route === 'ajustes' && render())
 
 if ('serviceWorker' in navigator && !window.synqueiDesktop && location.protocol === 'https:') {
   navigator.serviceWorker.register('/sw.js').catch(() => {})
