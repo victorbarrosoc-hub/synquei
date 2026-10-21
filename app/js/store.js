@@ -278,10 +278,32 @@ function getWorker() {
   return worker
 }
 
+// a sincronia em andamento (Parar) e a leitura de cada clipe (Pular)
+let syncCtrl = null
+const clipCtrls = new Map()
+const cancelado = () => new DOMException('Sincronização parada', 'AbortError')
+
+/** Para a sincronização. O áudio que já foi lido fica guardado: rodar de novo continua de onde parou. */
+export function stopSync() {
+  if (!S.sync.running || !syncCtrl) return false
+  syncCtrl.abort()
+  return true
+}
+
+/** Pula a leitura de um clipe (ele entra pelo timecode ou pela data, ou fica de fora para conferir). */
+export function skipClip(id) {
+  const c = clipCtrls.get(id)
+  if (!c) return false
+  c.abort()
+  return true
+}
+
 export async function runSync() {
   const p = S.project
   if (!p || S.sync.running) return
   const ready = p.clips.filter((c) => c.status === 'ready')
+  const ctrl = (syncCtrl = new AbortController())
+  const signal = ctrl.signal
   S.sync = { running: true, phase: 'audio', done: 0, total: 0, clip: {}, error: null, finishedAt: null, startedAt: Date.now() }
   sfx.start()
   changed()
@@ -291,12 +313,17 @@ export async function runSync() {
     S.sync.total = todo.length
     let k = 0
     const run = async () => {
-      while (k < todo.length) {
+      while (k < todo.length && !signal.aborted) {
         const c = todo[k++]
+        const cc = new AbortController()
+        const parar = () => cc.abort()
+        signal.addEventListener('abort', parar)
+        clipCtrls.set(c.id, cc)
         S.sync.clip[c.id] = { p: 0, st: 'lendo' }
         progress()
         try {
           const { sig } = await extractAudio(S.files.get(c.id), S.plans.get(c.id), {
+            signal: cc.signal,
             onProgress: (x) => {
               S.sync.clip[c.id].p = x
               progress()
@@ -311,15 +338,25 @@ export async function runSync() {
           S.sync.clip[c.id] = { p: 1, st: 'ok' }
           sfx.tick()
         } catch (e) {
-          c.audioStatus = 'error'
-          c.audioNote = e.message || String(e)
-          S.sync.clip[c.id] = { p: 1, st: 'erro', msg: c.audioNote }
+          if (signal.aborted) break
+          if (cc.signal.aborted) {
+            // pulado: não marca o áudio como ruim; na próxima sincronia ele é lido de novo
+            S.sync.clip[c.id] = { p: 1, st: 'pulado' }
+          } else {
+            c.audioStatus = 'error'
+            c.audioNote = e.message || String(e)
+            S.sync.clip[c.id] = { p: 1, st: 'erro', msg: c.audioNote }
+          }
+        } finally {
+          signal.removeEventListener('abort', parar)
+          clipCtrls.delete(c.id)
         }
         S.sync.done++
         progress()
       }
     }
     await Promise.all([run(), run()])
+    if (signal.aborted) throw cancelado()
     // 2. motor
     S.sync.phase = 'match'
     S.sync.done = 0
@@ -330,7 +367,8 @@ export async function runSync() {
     progress()
     const opts = { sharedTC: p.sync.sharedTC, useDate: p.sync.mode !== 'audio' && p.sync.useDate, chronological: p.sync.chronological, drift: p.sync.drift, minConf: p.sync.minConf }
     let res = null
-    if (p.sync.mode !== 'timecode' && items.length) res = await engine(items, opts)
+    if (p.sync.mode !== 'timecode' && items.length) res = await engine(items, opts, signal)
+    if (signal.aborted) throw cancelado()
     // 3. resultado
     S.sync.phase = 'done'
     const st = applySync(p, res)
@@ -341,19 +379,39 @@ export async function runSync() {
     changed()
     return st
   } catch (e) {
+    if (signal.aborted || (e && e.name === 'AbortError')) {
+      // parado pela pessoa: o resultado anterior (se houver) continua valendo
+      S.sync = { running: false, phase: '', done: 0, total: 0, clip: S.sync.clip, error: null, finishedAt: null, parada: Date.now() }
+      changed()
+      return null
+    }
     S.sync.running = false
     S.sync.error = e.message || String(e)
     changed()
     throw e
+  } finally {
+    if (syncCtrl === ctrl) syncCtrl = null
   }
 }
 
-function engine(items, opts) {
+function engine(items, opts, signal) {
   const w = getWorker()
   if (!w) {
     return import('./sync/engine.js').then((m) => m.syncAll(items, { ...opts, onProgress: (x) => Object.assign(S.sync, { done: x.done, total: x.total }) }))
   }
   return new Promise((resolve, reject) => {
+    // Parar no meio da comparação: o worker é encerrado na hora (os sinais que estavam com ele são lidos de novo)
+    if (signal) {
+      signal.addEventListener(
+        'abort',
+        () => {
+          w.terminate()
+          worker = null
+          reject(cancelado())
+        },
+        { once: true },
+      )
+    }
     w.onmessage = (e) => {
       const d = e.data
       if (d.type === 'progress') {
