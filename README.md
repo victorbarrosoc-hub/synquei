@@ -70,6 +70,32 @@ O catálogo completo (contêineres, RAW, codecs, estruturas de cartão) está em
 
 O caminho dos arquivos sai da **pasta da mídia** que você informa + o caminho relativo da pasta arrastada (o navegador não revela caminhos absolutos). No app de desktop (Electron), o caminho absoluto é usado direto.
 
+## App de desktop (Mac e Windows)
+
+O mesmo app, empacotado com Electron (`desktop/main.cjs`). Vantagens sobre o navegador:
+
+- **Caminho completo** de cada arquivo vai para as exportações: o editor acha a mídia sem revincular (a pasta da mídia nem aparece).
+- **AAC e H.264 sempre**: o Chromium do Electron traz os decodificadores (áudio de celular e GoPro, miniaturas).
+- Menu em português, atalhos (⌘O, ⌘1–5), janela integrada à barra lateral no Mac.
+
+Distribuição (mesmo modelo do SOBEDESCE):
+
+1. `.github/workflows/desktop.yml` gera o `.dmg` (universal, Apple Silicon e Intel) num Mac e o `.exe` (x64 e ARM) num Windows do GitHub, roda o teste de fumaça do app empacotado (`--smoke`: monta o exemplo, sincroniza, exporta) e publica no Release **"Synquei · app de desktop"** (tag `app-desktop`), com o build no nome e um `versao.json` com o SHA-256 de cada instalador.
+2. `api/baixar.js` (função da Vercel) atende `/baixar/mac`, `/baixar/windows` e `/baixar/versao` e manda direto para o arquivo do GitHub. **Repositório privado:** crie na Vercel a variável `GITHUB_TOKEN` (token fino, só leitura de *Contents* deste repositório).
+3. `instalar.sh` e `instalar.ps1`: instalação de uma linha, sem os avisos do macOS/Windows, conferindo o SHA-256:
+   - Mac: `curl -fsSL https://synquei.vercel.app/instalar.sh | bash`
+   - Windows: `irm https://synquei.vercel.app/instalar.ps1 | iex`
+
+Sem assinatura da Apple/Microsoft por enquanto (ad-hoc no Mac). O site ensina a abrir na primeira vez.
+
+```sh
+npm install
+npm run desktop          # abre o app de desktop
+npm run smoke            # teste de fumaça
+npm run dist:mac         # .dmg (num Mac)
+npm run dist:win         # .exe (no Windows)
+```
+
 ## Rodar local
 
 ```sh
@@ -90,5 +116,9 @@ app/                            o app (index.html, app.css, js/)
   js/export/                    xmeml, FCPXML, OTIO, EDL, ALE, CSV, ZIP
   js/views/                     uma tela por aba
 sw.js                           modo offline
+desktop/                        app de desktop (Electron)
+api/baixar.js                   /baixar/* na Vercel
+instalar.sh, instalar.ps1       instalação de uma linha
+.github/workflows/desktop.yml   instaladores no GitHub Actions
 tests/                          node --test
 ```

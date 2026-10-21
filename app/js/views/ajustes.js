@@ -49,8 +49,12 @@ export default {
         <div class="set-row"><div><b>Empurrar clipe um quadro</b><small>Na linha do tempo. Com Option/Alt, 1 ms.</small></div><span><span class="kbd">←</span> <span class="kbd">→</span></span></div>
         <div class="set-row"><div><b>Trocar de aba</b></div><span><span class="kbd">1</span> … <span class="kbd">5</span></span></div>
       </div></section>
+      ${window.synqueiDesktop ? '' : `<section class="card"><header class="card-head"><h2>App de desktop</h2></header><div class="card-pad">
+        <div class="set-row"><div><b>Synquei para Mac e Windows</b><small>No desktop, cada clipe vai com o caminho completo para o editor e o áudio de celular e GoPro funciona em qualquer máquina.</small></div><span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><a class="btn btn-secondary btn-sm" href="/baixar/mac">${icon('download')}Mac</a><a class="btn btn-secondary btn-sm" href="/baixar/windows">${icon('download')}Windows</a></span></div>
+        <div class="set-row"><div><b>Como instalar</b><small>Passo a passo e instalação sem aviso pelo Terminal.</small></div><a class="btn btn-ghost btn-sm" href="/#baixar" target="_blank" rel="noopener">Ver no site</a></div>
+      </div></section>`}
       <section class="card"><header class="card-head"><h2>Privacidade</h2></header><div class="card-pad" style="padding:16px 20px;display:grid;gap:10px">
-        <div class="info-box">${icon('lock')}<div>O Synquei roda inteiro no seu navegador. Os arquivos são lidos direto do disco e nunca são enviados para servidor nenhum. Não há conta, rastreador nem análise de uso.</div></div>
+        <div class="info-box">${icon('lock')}<div>O Synquei roda inteiro no seu computador. Os arquivos são lidos direto do disco e nunca são enviados para servidor nenhum. Não há conta, rastreador nem análise de uso.</div></div>
         <p class="sub">Os projetos (nomes dos arquivos, aparelhos e posições) ficam guardados neste navegador. Para levar a outro computador, exporte o arquivo .synquei em Exportar › Relatório.</p>
       </div></section>
       <section class="card"><header class="card-head"><h2>Dados</h2></header><div class="card-pad"><div class="set-row"><div><b>Projetos guardados</b><small>${S.list.length} neste navegador.</small></div><button class="btn btn-secondary btn-danger" data-act="wipe">${icon('trash')}Apagar todos</button></div></div></section>
