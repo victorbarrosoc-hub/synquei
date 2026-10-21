@@ -15,7 +15,7 @@ export const CONTAINERS = [
   { id: 'mts', name: 'AVCHD / MPEG-TS', ext: ['mts', 'm2ts', 'ts', 'm2t', 'tod', 'mod'], kind: 'video', audio: 'codec', tc: false, who: 'Sony e Panasonic (AVCHD), HDV, gravadores de broadcast', note: 'LPCM e AAC lidos; AC-3 depende do navegador.' },
   { id: 'avi', name: 'AVI / OpenDML', ext: ['avi'], kind: 'video', audio: 'full', tc: false, who: 'Câmeras antigas, DV, MJPEG, capturas', note: 'Áudio PCM lido direto, inclusive acima de 1 GB (AVIX).' },
   { id: 'mkv', name: 'Matroska / WebM', ext: ['mkv', 'webm', 'mka'], kind: 'video', audio: 'codec', tc: false, who: 'OBS, gravações de tela, ferramentas abertas', note: 'Opus, Vorbis, AAC e FLAC pelo navegador.' },
-  { id: 'insv', name: 'Insta360 / GoPro 360', ext: ['insv', '360', 'lrv'], kind: 'video', audio: 'codec', tc: false, who: 'Insta360, GoPro MAX', note: 'MP4 por dentro. LRV é o proxy da GoPro e fica de fora quando o original está junto.' },
+  { id: 'insv', name: 'Insta360 / GoPro 360', ext: ['insv', '360', 'lrv'], kind: 'video', audio: 'codec', tc: false, who: 'Insta360, GoPro MAX', note: 'MP4 por dentro. O LRV (proxy da GoPro) fica de fora automaticamente.' },
   { id: 'mpg', name: 'MPEG-PS', ext: ['mpg', 'mpeg', 'vob', 'm2p'], kind: 'video', audio: 'codec', tc: false, who: 'DVD, câmeras SD antigas', note: 'Reconhecido; o áudio MPEG/AC-3 depende do navegador.' },
   { id: 'asf', name: 'Windows Media', ext: ['wmv', 'asf'], kind: 'video', audio: 'codec', tc: false, who: 'Arquivos antigos do Windows', note: 'Reconhecido; o som depende do navegador.' },
   { id: 'flv', name: 'Flash Video', ext: ['flv', 'f4v'], kind: 'video', audio: 'codec', tc: false, who: 'Gravações antigas de transmissão', note: 'Reconhecido; o som depende do navegador.' },

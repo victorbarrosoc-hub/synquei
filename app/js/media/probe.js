@@ -9,6 +9,7 @@ import { probeMxf } from './mxf.js'
 import { probeMkv } from './ebml.js'
 import { probeTs, packetSize } from './ts.js'
 import { probeTiff, probeR3d, probeCine } from './raw.js'
+import { parseSonyXml } from './sidecar.js'
 
 export const CONTAINER_LABEL = {
   mov: 'QuickTime',
@@ -181,4 +182,22 @@ export async function probe(file, relPath = file.name) {
   }
   if (out.audio === null && out.audioPlan && out.audioPlan.type === 'decode') out.audio = { codec: (CONTAINER_LABEL[info.container] || ext).toUpperCase(), sampleRate: null, channels: null }
   return out
+}
+
+/** Ficha do clipe + o XML da Sony que veio ao lado (C0001M01.XML): timecode, modelo e série quando o arquivo não traz. */
+export async function probeWithSidecar(file, relPath, sidecar) {
+  const info = await probe(file, relPath)
+  if (!sidecar) return info
+  try {
+    const x = parseSonyXml(await sidecar.text())
+    if (x) {
+      if (x.timecode && !info.timecode) info.timecode = x.timecode
+      if (x.device) info.device = x.device
+      if (x.created && info.createdSource !== 'metadado') {
+        info.created = x.created
+        info.createdSource = 'XML Sony'
+      }
+    }
+  } catch {}
+  return info
 }
