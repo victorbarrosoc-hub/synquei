@@ -2011,3 +2011,27 @@ button {
 .exp-layout .grid-2 {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
+
+/* app de desktop: barra de título do Mac integrada à barra lateral */
+.is-desktop.platform-darwin .sidebar {
+  padding-top: 50px;
+  -webkit-app-region: drag;
+}
+.is-desktop .sidebar a,
+.is-desktop .sidebar button,
+.is-desktop .sidebar input {
+  -webkit-app-region: no-drag;
+}
+.is-desktop.platform-darwin .main::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: var(--sidebar-w);
+  right: 0;
+  height: 28px;
+  z-index: 15;
+  -webkit-app-region: drag;
+}
+.is-desktop .privacy {
+  display: none;
+}

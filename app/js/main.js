@@ -214,10 +214,15 @@ addEventListener('resize', () => {
   resizeT = setTimeout(() => S.route === 'linha' && render(), 200)
 })
 addEventListener('beforeunload', () => save(true))
+// no app de desktop a marca leva aos projetos (não ao site)
+if (window.synqueiDesktop) {
+  const b = $('.brand')
+  if (b) b.setAttribute('href', '#/projetos')
+}
 loadIndex()
 render()
 
-if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+if ('serviceWorker' in navigator && !window.synqueiDesktop && location.protocol === 'https:') {
   navigator.serviceWorker.register('/sw.js').catch(() => {})
 }
 

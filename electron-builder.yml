@@ -1,0 +1,80 @@
+# Empacotamento do app de desktop (npm run dist:mac / dist:win, ou o GitHub Actions em .github/workflows/desktop.yml).
+appId: app.synquei.desktop
+productName: Synquei
+copyright: Copyright © 2026 Synquei
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+directories:
+  output: dist
+  buildResources: build
+
+# O app é o mesmo do navegador (app/) servido de dentro do app.asar pelo protocolo synquei:// (desktop/main.cjs).
+# Sem dependências de produção: só o Electron e estes arquivos.
+asar: true
+files:
+  - package.json
+  - desktop/**/*
+  - app/**/*
+  - icons/**/*
+  - build/icon.png
+  - "!**/*.map"
+  - "!**/*.md"
+
+# Fusíveis do Electron: o executável não vira um Node com as permissões do app, NODE_OPTIONS e --inspect não entram,
+# e só o app.asar conferido pelo hash é carregado (mexer no app instalado faz ele não abrir, em vez de rodar código trocado).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+
+mac:
+  target:
+    - target: dmg
+      arch: [universal]
+  category: public.app-category.video
+  icon: build/icon.png
+  minimumSystemVersion: "11.0"
+  # Sem certificado da Apple por enquanto: assinatura ad-hoc (o macOS pede "Abrir Mesmo Assim" na primeira vez,
+  # ou use o instalador pelo Terminal do site, que não tem esse aviso).
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  notarize: false
+  extendInfo:
+    NSDesktopFolderUsageDescription: O Synquei lê os arquivos de vídeo e áudio que você escolhe para sincronizar.
+    NSDocumentsFolderUsageDescription: O Synquei lê os arquivos de vídeo e áudio que você escolhe para sincronizar.
+    NSDownloadsFolderUsageDescription: O Synquei lê os arquivos que você escolhe e grava as exportações onde você mandar.
+    NSRemovableVolumesUsageDescription: O Synquei lê os cartões e discos externos que você escolher.
+    NSNetworkVolumesUsageDescription: O Synquei lê os volumes de rede que você escolher.
+
+dmg:
+  title: Synquei
+  contents:
+    - x: 140
+      y: 200
+    - x: 400
+      y: 200
+      type: link
+      path: /Applications
+
+win:
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  icon: build/icon.png
+
+nsis:
+  # Instala só para o usuário atual, sem pedir senha de administrador.
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Synquei
+  artifactName: ${productName}-${version}-windows-setup.${ext}
+
+linux:
+  target: [dir]
+  category: AudioVideo
+  icon: build/icon.png

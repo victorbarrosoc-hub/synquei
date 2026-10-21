@@ -175,13 +175,17 @@ export async function addEntries(entries, { name } = {}) {
     if (old) {
       if (!S.files.has(old.id)) {
         S.files.set(old.id, m.file)
+        const abs = globalThis.synqueiDesktop ? globalThis.synqueiDesktop.pathFor(m.file) : null
+        if (abs) old.absPath = abs
         queue.push({ clip: old, m, relink: true })
         relinked++
       }
       continue
     }
     const c = clipFromScan(m)
-    if (m.file.path) c.absPath = m.file.path
+    // app de desktop: caminho completo do arquivo (as exportações não precisam da pasta da mídia)
+    const abs = globalThis.synqueiDesktop ? globalThis.synqueiDesktop.pathFor(m.file) : null
+    if (abs) c.absPath = abs
     p.clips.push(c)
     S.files.set(c.id, m.file)
     queue.push({ clip: c, m })
