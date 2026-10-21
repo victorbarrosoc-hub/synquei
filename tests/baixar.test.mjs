@@ -65,3 +65,21 @@ test('sem instalador ainda: volta para a seção Baixar do site', async () => {
   await h({ query: { p: 'windows' } }, res)
   assert.equal(res.loc, '/?baixar=indisponivel#baixar')
 })
+
+test('diag diz o motivo sem mostrar o token', async () => {
+  const h = await load(ASSETS)
+  const ok = fakeRes()
+  await h({ query: { p: 'diag' } }, ok)
+  assert.equal(ok.body.token, false)
+  assert.equal(ok.body.githubRelease, 200)
+  assert.equal(ok.body.mac, 2)
+  globalThis.fetch = async () => new Response('{}', { status: 401 })
+  process.env.GITHUB_TOKEN = 'github_pat_SEGREDO\n'
+  const ruim = fakeRes()
+  await h({ query: { p: 'diag' } }, ruim)
+  assert.equal(ruim.body.tipoToken, 'fino')
+  assert.equal(ruim.body.espacoNasPontas, true)
+  assert.match(ruim.body.motivo, /recusado/)
+  assert.ok(!JSON.stringify(ruim.body).includes('SEGREDO'))
+  delete process.env.GITHUB_TOKEN
+})
