@@ -24,10 +24,22 @@ export function go(route, force) {
 
 function routeFromHash() {
   const r = (location.hash.replace(/^#\/?/, '') || '').split('/')[0]
+  if (r === 'exemplo') {
+    if (!demoLoading) {
+      demoLoading = true
+      history.replaceState(null, '', '#/projetos')
+      import('./demo.js')
+        .then((m) => m.loadDemo())
+        .then(() => go('midia'))
+        .finally(() => (demoLoading = false))
+    }
+    return 'projetos'
+  }
   return VIEWS[r] ? r : S.project ? 'midia' : 'projetos'
 }
 
 let lastRoute = null
+let demoLoading = false
 function render() {
   const route = routeFromHash()
   S.route = route

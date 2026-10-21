@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Formatos · Synquei</title>
+    <meta name="description" content="Todos os contêineres, codecs e RAW de câmera que o Synquei reconhece: MOV, MP4, MXF, AVCHD, BRAW, R3D, ARRIRAW, CinemaDNG, WAV/BWF com timecode, AIFF e mais." />
+    <meta property="og:title" content="Formatos · Synquei" />
+    <meta property="og:image" content="https://synquei.vercel.app/og.png" />
+    <link rel="icon" href="/icons/favicon.svg" type="image/svg+xml" />
+    <script>document.documentElement.classList.add('js')</script>
+    <link rel="stylesheet" href="/site.css" />
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="g-logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f6bff" /><stop offset="1" stop-color="#a98bff" /></linearGradient>
+        <symbol id="logo" viewBox="0 0 32 32">
+          <rect x="3" y="11" width="4" height="10" rx="2" fill="url(#g-logo)" />
+          <rect x="9.5" y="6" width="4" height="20" rx="2" fill="url(#g-logo)" />
+          <rect x="16" y="2.5" width="4" height="27" rx="2" fill="currentColor" />
+          <rect x="22.5" y="8" width="4" height="16" rx="2" fill="url(#g-logo)" />
+          <rect x="29" y="12.5" width="3" height="7" rx="1.5" fill="url(#g-logo)" opacity=".7" />
+        </symbol>
+      </defs>
+    </svg>
+    <header class="head">
+      <div class="head-in">
+        <a class="brand" href="/" aria-label="Synquei, início"><svg class="brand-mark" aria-hidden="true"><use href="#logo" /></svg>Syn<span>quei</span></a>
+        <nav class="nav" aria-label="Seções"><a href="/#recursos">Recursos</a><a href="/#exportar">Exportar</a><a href="/#por-que">Por que</a><a href="/formatos/" aria-current="page">Formatos</a></nav>
+        <a class="btn btn-dark btn-sm" href="/app/">Abrir o app</a>
+      </div>
+    </header>
+    <main class="wrap">
+      <section class="page-top">
+        <p class="eyebrow-grad rise">Formatos</p>
+        <h1 class="rise" style="--d: 1">Lê o que a sua câmera grava.</h1>
+        <p class="rise" style="--d: 2" id="lead">Contêineres, codecs e RAW de câmera, com o que o Synquei faz com cada um. O arquivo é identificado pelos primeiros bytes: extensão trocada ou ausente não engana.</p>
+        <div class="legend-row rise" style="--d: 3"><span class="chip chip-ok">Sincroniza pelo áudio</span><span class="chip chip-blue">Áudio pelo navegador</span><span class="chip chip-lav">Timecode, data ou WAV junto</span><span class="chip">Sem áudio: timecode ou data</span></div>
+      </section>
+      <div class="fmt-tools">
+        <input type="search" id="q" placeholder="Buscar formato, extensão ou câmera (ex.: braw, FX3, rf64)" autocomplete="off" />
+        <div class="seg" id="seg" role="group" aria-label="Filtro">
+          <button data-f="all" aria-pressed="true">Tudo</button><button data-f="video" aria-pressed="false">Vídeo</button><button data-f="raw" aria-pressed="false">RAW</button><button data-f="audio" aria-pressed="false">Áudio</button><button data-f="codec" aria-pressed="false">Codecs</button><button data-f="card" aria-pressed="false">Cartões</button>
+        </div>
+      </div>
+      <div id="out" style="padding-bottom: 96px"></div>
+    </main>
+    <section class="closing">
+      <div class="closing-glow" aria-hidden="true"></div>
+      <div class="wrap closing-in">
+        <h2>Solta o cartão. Sai sincronizado.</h2>
+        <div class="cta"><a class="btn btn-white btn-lg" href="/app/">Abrir o Synquei</a></div>
+      </div>
+    </section>
+    <footer class="foot"><div class="wrap foot-in"><a class="brand" href="/"><svg class="brand-mark" aria-hidden="true"><use href="#logo" /></svg>Syn<span>quei</span></a><nav><a href="/app/">App</a><a href="/">Início</a></nav><p>Todas as câmeras no mesmo segundo.</p></div></footer>
+    <script type="module">
+      import { renderFormats, formatCount } from '/app/js/views/formatos-render.js'
+      const out = document.getElementById('out')
+      const q = document.getElementById('q')
+      let f = 'all'
+      const n = formatCount()
+      document.getElementById('lead').textContent = `${n.extensions} extensões, ${n.videoCodecs} codecs de vídeo e ${n.raw} famílias de RAW, com o que o Synquei faz com cada um. O arquivo é identificado pelos primeiros bytes: extensão trocada ou ausente não engana.`
+      const draw = () => (out.innerHTML = renderFormats(q.value, f))
+      q.addEventListener('input', draw)
+      for (const b of document.querySelectorAll('#seg button'))
+        b.addEventListener('click', () => {
+          f = b.dataset.f
+          for (const x of document.querySelectorAll('#seg button')) x.setAttribute('aria-pressed', x === b)
+          draw()
+        })
+      draw()
+    </script>
+  </body>
+</html>
