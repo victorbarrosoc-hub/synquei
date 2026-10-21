@@ -6,6 +6,7 @@ import { probeWithSidecar } from './media/probe.js'
 import { extractAudio, peaks as mkPeaks } from './media/extract.js'
 import { b64 } from './util.js'
 import { sfx } from './sfx.js'
+import { aplicarTipo } from './tipos.js'
 
 const IDX = 'synquei:index'
 const KEY = (id) => `synquei:p:${id}`
@@ -88,7 +89,7 @@ export function save(now = false) {
 function summaryOf(p) {
   const ready = p.clips.filter((c) => c.status === 'ready')
   const devs = p.devices.map((d) => ({ label: d.label, color: d.color, n: p.clips.filter((c) => c.deviceId === d.id).length }))
-  return { id: p.id, name: p.name, updatedAt: p.updatedAt, createdAt: p.createdAt, clips: ready.length, devices: devs, synced: p.result ? p.result.stats : null }
+  return { id: p.id, name: p.name, type: p.type || null, multicam: p.export.multicam !== false, updatedAt: p.updatedAt, createdAt: p.createdAt, clips: ready.length, devices: devs, synced: p.result ? p.result.stats : null }
 }
 
 export function openProject(id) {
@@ -100,8 +101,11 @@ export function openProject(id) {
 }
 
 export function setProject(p) {
+  const hadMc = !!(p.export && 'multicam' in p.export)
   p.sync = { ...DEFAULT_SYNC, ...(p.sync || {}) }
   p.export = { ...DEFAULT_EXPORT, ...(p.export || {}) }
+  // projetos de antes do multicâmera: vale o que estava escolhido para o Final Cut
+  if (!hadMc) p.export.multicam = p.export.fcp !== 'timeline'
   S.project = p
   S.files.clear()
   S.plans.clear()
@@ -122,6 +126,19 @@ export function createProject(name) {
   }
   setProject(p)
   return p
+}
+
+/** Tipo do projeto (e nome e multicâmera), vindo do seletor. */
+export function applyType({ name, type, multicam }) {
+  const p = S.project
+  if (!p) return
+  if (name) p.name = name
+  aplicarTipo(p, type, multicam)
+  if (p.result) {
+    p.sessions = buildSessions(p)
+    p.result.stats = stats(p)
+  }
+  changed()
 }
 
 export function deleteProject(id) {

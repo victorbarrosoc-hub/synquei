@@ -2,12 +2,13 @@
 // de soltar as pastas, os atalhos, os aparelhos e os projetos recentes. Tudo entra com movimento (e parado, para quem
 // pediu menos movimento). Sem projeto, uma ilustração mostra o que o Synquei faz.
 
-import { S, openProject, hasMedia } from '../store.js'
+import { S, changed, openProject, hasMedia } from '../store.js'
 import { h, icon, plural, bytes, ago, uiDark } from '../util.js'
 import { devColor, KIND_LABEL } from '../media/devices.js'
 import { duration } from '../time.js'
 import { loadDemo } from '../demo.js'
 import { go } from '../main.js'
+import { tipoDe } from '../tipos.js'
 
 const KIND_ICON = { camera: 'camera', recorder: 'mic', phone: 'phone', action: 'action', drone: 'drone' }
 // categorias do gráfico de sincronia, na ordem fixa da paleta (azul, laranja, verde-água) + cinza para "fora"
@@ -165,11 +166,28 @@ function recentes() {
               return `<li class="pn-item is-click" data-act="open" data-id="${h(e.id)}"><span class="pn-proj-lanes" aria-hidden="true">${e.devices
                 .slice(0, 4)
                 .map((d, k) => `<i style="--c:${devColor(d, true)};--w:${40 + ((k * 23) % 50)}%;--o:${(k * 17) % 30}%"></i>`)
-                .join('')}</span><div class="pn-item-txt"><b>${h(e.name)}</b><span class="sub">${plural(e.clips, 'clipe', 'clipes')} · ${ago(e.updatedAt)}</span></div>${st ? `<span class="chip ${ok ? 'chip-ok' : 'chip-warn'}">${ok ? icon('check') + 'Sincronizado' : `${st.total - st.unsynced}/${st.total}`}</span>` : '<span class="chip">Novo</span>'}</li>`
+                .join('')}</span><div class="pn-item-txt"><b>${h(e.name)}</b><span class="sub">${tipoDe(e.type) ? `${h(tipoDe(e.type).label)} · ` : ''}${plural(e.clips, 'clipe', 'clipes')} · ${ago(e.updatedAt)}</span></div>${st ? `<span class="chip ${ok ? 'chip-ok' : 'chip-warn'}">${ok ? icon('check') + 'Sincronizado' : `${st.total - st.unsynced}/${st.total}`}</span>` : '<span class="chip">Novo</span>'}</li>`
             })
             .join('')}</ul>`
         : `<div class="pn-vazio">Seus projetos ficam guardados neste computador.</div>`
     }</section>`
+}
+
+/** Tipo do projeto (clique para trocar) e se a exportação vai em multicâmera. */
+function tipoLinha(p) {
+  const t = tipoDe(p.type)
+  const mc = p.export.multicam !== false
+  return `<div class="pn-tipo">${
+    t
+      ? `<button class="tipo-chip is-${t.tom}" data-act="tipo" title="Trocar o tipo">${icon(t.icon)}${h(t.label)}<span class="tipo-trocar">Trocar</span></button>`
+      : `<button class="tipo-chip is-alerta" data-act="tipo">${icon('sparkle')}Que projeto é esse? Escolher o tipo</button>`
+  }<button class="tipo-chip ${mc ? 'is-mc' : 'is-none'}" data-act="mc" aria-pressed="${mc}" title="Ligar ou desligar o multicâmera nas exportações">${icon('multicam')}${mc ? 'Multicâmera ligado' : 'Multicâmera desligado'}</button></div>`
+}
+
+function dicasTipo(p) {
+  const t = tipoDe(p.type)
+  if (!t) return ''
+  return `<section class="pn-dicas is-${t.tom}" style="--i:9"><span class="pn-cartao-icone">${icon(t.icon)}</span><div><p class="eyebrow">Dicas para ${h(t.label)}</p><ul>${t.dicas.map((d) => `<li>${h(d)}</li>`).join('')}</ul></div></section>`
 }
 
 /** Ilustração do vazio: três aparelhos mandam o som, as faixas se alinham e o check aparece. */
@@ -211,13 +229,20 @@ export default {
     const st = p.result ? p.result.stats : null
     const lead = S.sync.running ? 'Sincronizando agora. Pode continuar usando o app.' : st ? (st.unsynced ? `${st.total - st.unsynced} de ${st.total} clipes na linha do tempo. ${plural(st.unsynced, 'ficou', 'ficaram')} de fora para você conferir.` : `${st.total} clipes no lugar, prontos para o editor.`) : `${plural(D.ready.length, 'clipe', 'clipes')} reconhecidos. Falta sincronizar.`
     return `<div class="page page-painel tela">
-      <header class="pn-ola" style="--i:0"><h1>${saudacao()}.</h1><p class="page-lead">${lead}</p></header>
+      <header class="pn-ola" style="--i:0"><h1>${saudacao()}.</h1><p class="page-lead">${lead}</p>${tipoLinha(p)}</header>
       ${cartoes(p, D, dark)}
       ${atalhos(p)}
+      ${dicasTipo(p)}
       <div class="pn-colunas">${aparelhos(D, dark)}${recentes()}</div>
     </div>`
   },
   acts: {
+    mc() {
+      const e = S.project.export
+      e.multicam = e.multicam === false
+      e.fcp = e.multicam ? 'both' : 'timeline'
+      changed()
+    },
     go(el) {
       go(el.dataset.r)
     },

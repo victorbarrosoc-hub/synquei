@@ -1,6 +1,8 @@
 // Synquei — app. Módulos ES sem build: rotas por hash, uma tela por aba, eventos delegados.
 
-import { S, on, changed, loadIndex, addEntries, runSync, save } from './store.js'
+import { S, on, changed, loadIndex, addEntries, runSync, save, createProject, applyType } from './store.js'
+import { escolherTipo } from './tipo-picker.js'
+import { tipoDe } from './tipos.js'
 import { entriesFromDrop, entriesFromInput } from './media/scan.js'
 import { $, $$, h, icon, toast, plural, download, uiDark } from './util.js'
 import { sfx } from './sfx.js'
@@ -208,6 +210,8 @@ document.addEventListener('click', (e) => {
   const act = el.dataset.act
   if (act === 'pick-folder') return pick('#pickFolder')
   if (act === 'pick-files') return pick('#pickFiles')
+  if (act === 'novo') return novoProjeto()
+  if (act === 'tipo') return pedirTipo(false)
   const v = VIEWS[S.route]
   if (v.acts && v.acts[act]) v.acts[act](el, e)
 })
@@ -241,11 +245,36 @@ for (const sel of ['#pickFolder', '#pickFiles']) {
   })
 }
 
+/** Projeto novo pelo botão: tipo e nome primeiro, pastas depois. */
+async function novoProjeto() {
+  const r = await escolherTipo({ novo: true })
+  if (!r) return
+  createProject(r.name)
+  applyType(r)
+  go('inicio', true)
+  toast(`${tipoDe(r.type).label}: agora solte as pastas dos cartões`, { icon: 'folder' })
+}
+
+/** Tipo do projeto aberto (ao criar soltando pastas, ou para trocar depois). */
+async function pedirTipo(novo) {
+  const p = S.project
+  if (!p) return novoProjeto()
+  const r = await escolherTipo({ name: p.name, type: p.type, multicam: p.type ? p.export.multicam : null, novo })
+  if (!r || S.project !== p) return
+  const mudou = r.type !== p.type
+  applyType(r)
+  if (!novo && mudou && p.result) toast(`Ajustes de ${tipoDe(r.type).label} aplicados. Sincronize de novo para usar.`, { icon: 'sync' })
+}
+
 async function importEntries(list) {
   if (!list.length) return
   sfx.pop()
+  const novo = !S.project
   if (S.route === 'projetos' || S.route === 'inicio' || !S.project) go('midia')
-  const r = await addEntries(list)
+  const job = addEntries(list)
+  // projeto criado agora: pergunta o tipo enquanto os arquivos são lidos
+  if (novo && S.project && !S.project.demo) pedirTipo(true)
+  const r = await job
   if (!r) return
   const parts = []
   if (r.added) parts.push(plural(r.added, 'clipe novo', 'clipes novos'))

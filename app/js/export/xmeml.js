@@ -92,11 +92,58 @@ function sequenceXml(tl, opts, ids, n) {
     .join('\n')
 }
 
+/**
+ * Multicâmera para o Premiere: uma sequência "edição" com a sequência de ângulos aninhada (vídeo em V1, som em A1/A2).
+ * O FCP7 XML não tem um marcador de multicâmera; no Premiere é clicar com o direito no clipe › Multicâmera › Ativar.
+ */
+function multicamXml(tl, src, ids, n) {
+  const I = '    '
+  const r = tl.rate
+  const d = tl.durationF
+  const v = `clipitem-${++ids.clip}`
+  const a = [`clipitem-${++ids.clip}`, `clipitem-${++ids.clip}`]
+  const links = (ind) =>
+    [`${ind}<link>\n${ind}  <linkclipref>${v}</linkclipref>\n${ind}  <mediatype>video</mediatype>\n${ind}  <trackindex>1</trackindex>\n${ind}  <clipindex>1</clipindex>\n${ind}</link>`]
+      .concat(a.map((id, i) => `${ind}<link>\n${ind}  <linkclipref>${id}</linkclipref>\n${ind}  <mediatype>audio</mediatype>\n${ind}  <trackindex>${i + 1}</trackindex>\n${ind}  <clipindex>1</clipindex>\n${ind}  <groupindex>1</groupindex>\n${ind}</link>`))
+      .join('\n')
+  const item = (id, ind, body, extra = '') =>
+    [`${ind}<clipitem id="${id}">`, `${ind}  <name>${esc(tl.name)} · ângulos</name>`, `${ind}  <enabled>TRUE</enabled>`, `${ind}  <duration>${d}</duration>`, rateXml(r, ind + '  '), `${ind}  <start>0</start>`, `${ind}  <end>${d}</end>`, `${ind}  <in>0</in>`, `${ind}  <out>${d}</out>`, body, extra, links(ind + '  '), `${ind}</clipitem>`].filter(Boolean).join('\n')
+  const J = I + '        '
+  const nested = src.replace(/^/gm, '    ').replace(/^\s+/, J + '  ')
+  const ref = src.match(/<sequence id="([^"]+)"/)[1]
+  const audio = a.map((id, i) => `${I}      <track>\n${item(id, J, `${J}  <sequence id="${ref}"/>`, `${J}  <sourcetrack>\n${J}    <mediatype>audio</mediatype>\n${J}    <trackindex>${i + 1}</trackindex>\n${J}  </sourcetrack>`)}\n${J}<enabled>TRUE</enabled>\n${J}<locked>FALSE</locked>\n${J}<outputchannelindex>${i + 1}</outputchannelindex>\n${I}      </track>`).join('\n')
+  return [
+    `${I}<sequence id="sequence-mc-${n}">`,
+    `${I}  <name>${esc(tl.name)} · multicâmera</name>`,
+    `${I}  <duration>${d}</duration>`,
+    rateXml(r, I + '  '),
+    `${I}  <media>`,
+    `${I}    <video>`,
+    `${I}      <format>\n${I}        <samplecharacteristics>\n${rateXml(r, I + '          ')}\n${I}          <width>${tl.width}</width>\n${I}          <height>${tl.height}</height>\n${I}          <anamorphic>FALSE</anamorphic>\n${I}          <pixelaspectratio>square</pixelaspectratio>\n${I}          <fielddominance>none</fielddominance>\n${I}        </samplecharacteristics>\n${I}      </format>`,
+    `${I}      <track>\n${item(v, J, nested)}\n${J}<enabled>TRUE</enabled>\n${J}<locked>FALSE</locked>\n${I}      </track>`,
+    `${I}    </video>`,
+    `${I}    <audio>`,
+    `${I}      <numOutputChannels>2</numOutputChannels>`,
+    audio,
+    `${I}    </audio>`,
+    `${I}  </media>`,
+    tcXml(tl.startFrames, r, tl.drop, I + '  '),
+    `${I}</sequence>`,
+  ].join('\n')
+}
+
 /** Um arquivo com várias sequências dentro de um projeto (Premiere) ou uma sequência solta (Resolve, Vegas). */
-export function toXmeml(timelines, project, { wrap = true } = {}) {
+export function toXmeml(timelines, project, { wrap = true, multicam = false } = {}) {
   const opts = { ...project.export, __devices: new Map(project.devices.map((d) => [d.id, d])) }
   const ids = { clip: 0, files: new Map(), master: new Map() }
-  const seqs = timelines.map((tl, i) => sequenceXml(tl, opts, ids, i + 1))
+  const seqs = timelines.map((tl, i) => {
+    // multicâmera: a sequência de ângulos vai aninhada na de edição (e não solta, para não duplicar no projeto)
+    if (multicam && wrap && !tl.unsynced && tl.video.length > 1) {
+      const src = sequenceXml({ ...tl, name: `${tl.name} · ângulos` }, opts, ids, i + 1)
+      return multicamXml(tl, src, ids, i + 1)
+    }
+    return sequenceXml(tl, opts, ids, i + 1)
+  })
   const head = '<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE xmeml>\n<xmeml version="4">'
   if (!wrap && seqs.length === 1) return `${head}\n${seqs[0].replace(/^ {4}/gm, '  ')}\n</xmeml>\n`
   return `${head}\n  <project>\n    <name>${esc(project.name)}</name>\n    <children>\n${seqs.map((s) => s.replace(/^/gm, '    ')).join('\n')}\n    </children>\n  </project>\n</xmeml>\n`

@@ -4,6 +4,7 @@
 import { scene, mic, cut, wav } from './sync/synth.js'
 import { S, createProject, addEntries, changed } from './store.js'
 import { regroup } from './project.js'
+import { aplicarTipo } from './tipos.js'
 import { snapRate, framesToTc, labelSecondsToFrames } from './time.js'
 
 const SR = 16000
@@ -20,6 +21,7 @@ const CLIPS = [
 export async function loadDemo() {
   const p = createProject('Exemplo · Entrevista com 3 câmeras')
   p.demo = true
+  aplicarTipo(p, 'entrevista', true)
   const sc = scene(180, SR, 42)
   const base = new Date(2024, 4, 1, 10, 0, 0).getTime()
   const entries = CLIPS.map((c) => {

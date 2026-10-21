@@ -11,6 +11,7 @@ import { scene, mic, cut, wav } from '../app/js/sync/synth.js'
 import { scanEntries } from '../app/js/media/scan.js'
 import { probeWithSidecar } from '../app/js/media/probe.js'
 import { extractAudio } from '../app/js/media/extract.js'
+import { aplicarTipo } from '../app/js/tipos.js'
 import { newProject, clipFromScan, applyProbe, regroup, engineItems, applySync } from '../app/js/project.js'
 import { syncAll } from '../app/js/sync/engine.js'
 import { filesFor, zipAll, TARGETS } from '../app/js/export/index.js'
@@ -120,6 +121,21 @@ test('projeto real: lê, agrupa, sincroniza e exporta', { skip: !hasFfmpeg && 's
   const fcp = filesFor('fcp', project)[0].data
   assert.ok(fcp.includes('<mc-angle name="CAM A"'))
   assert.ok(fcp.includes('src="file:///Volumes/SSD/Projeto/AUDIO/ZOOM0001.WAV"'))
+  // multicâmera no Premiere: a sequência de ângulos vai aninhada na de edição (vídeo e os dois canais de som)
+  assert.ok(prem.includes('· multicâmera</name>'))
+  assert.equal(prem.match(/<sequence id="sequence-1"\/>/g).length, 2)
+  assert.ok(filesFor('resolve', project).some((f) => f.name.endsWith('Resolve multicâmera.fcpxml')))
+  // tipo sem multicâmera: camadas só
+  aplicarTipo(project, 'ficcao')
+  assert.equal(project.export.multicam, false)
+  assert.equal(project.sync.chronological, true)
+  assert.ok(!filesFor('premiere', project)[0].data.includes('multicâmera'))
+  assert.ok(!filesFor('fcp', project)[0].data.includes('<mc-angle'))
+  assert.ok(!filesFor('resolve', project).some((f) => f.name.endsWith('.fcpxml')))
+  aplicarTipo(project, 'videoclipe')
+  assert.equal(project.export.multicam, true)
+  assert.equal(project.sync.chronological, false)
+  assert.equal(project.sync.mode, 'audio')
   if (process.env.SYNQUEI_KEEP) console.log('EXPORT_DIR', out)
   const z2 = join(out, 'tudo.zip')
   writeFileSync(z2, zipAll(project))

@@ -12,7 +12,8 @@
 
 | Aba | O que tem |
 | --- | --- |
-| **Projetos** | Soltar as pastas dos cartões, abrir o exemplo, abrir um `.synquei`, projetos recentes |
+| **Início** | Painel do projeto aberto: sincronia, confiança, material por aparelho, atalhos, dicas do tipo de projeto, recentes |
+| **Projetos** | Novo projeto com tipo, projetos separados por tipo (filtro e seções), soltar pastas, exemplo, `.synquei` |
 | **Mídia** | Clipes agrupados por aparelho (renomear, trocar o tipo, mover clipe), filtros, busca, todos os metadados de cada arquivo, arquivos ignorados |
 | **Sincronizar** | Método (som + timecode, só som, só timecode), timecode batido, data, ordem, deriva, rigor, sessões; andamento ao vivo e resultado |
 | **Linha do tempo** | Uma faixa por aparelho, cor por confiança, arrastar para ajustar, empurrar por quadro ou milissegundo, formas de onda sobrepostas para conferir |
@@ -21,6 +22,21 @@
 | **Ajustes** | Tema, padrões, atalhos, privacidade, dados |
 
 Visual claro com modo escuro automático; palcos e linha do tempo sempre escuros.
+
+### Tipos de projeto (`app/js/tipos.js`)
+
+Ao criar um projeto (pelo botão ou soltando as pastas), o Synquei pergunta o que está sendo gravado. Cada tipo ajusta a sincronia e a exportação e traz dicas de gravação; tudo continua editável.
+
+| Grupo | Tipos |
+| --- | --- |
+| Música | Videoclipe (takes sobre a música, sem ordem por aparelho, só som), Show ao vivo, DVD · Gravação ao vivo, EP · Sessão ao vivo |
+| Conversa e documentário | Entrevista, Podcast · Videocast, Documentário |
+| Conteúdo e ensino | Vídeo de conteúdo, Aula · Curso online |
+| Eventos | Casamento, Evento · Palestra, Culto · Celebração |
+| Ficção e publicidade | Curta · Filme · Série, Publicidade |
+| Outros | Teatro · Dança, Esporte · Ação, Outro |
+
+**Multicâmera** liga ou desliga por projeto (vem do tipo): Premiere recebe a sequência de ângulos aninhada numa sequência de edição (clique com o direito › Multicâmera › Ativar), Resolve 18+ e Final Cut recebem clipe multicâmera em FCPXML, Avid agrupa em multigroup pelo Auxiliary TC1.
 
 ## Como sincroniza (`app/js/sync/engine.js`)
 
@@ -59,8 +75,8 @@ O catálogo completo (contêineres, RAW, codecs, estruturas de cartão) está em
 
 | Destino | Arquivo | Detalhes |
 | --- | --- | --- |
-| Premiere Pro | XML do Final Cut 7 (xmeml v4) | uma sequência por sessão dentro de um projeto, vídeo e áudio vinculados, cor por aparelho, marcadores nos clipes para conferir |
-| DaVinci Resolve | xmeml por sessão + OTIO | importa como timeline |
+| Premiere Pro | XML do Final Cut 7 (xmeml v4) | uma sequência por sessão dentro de um projeto (multicâmera: ângulos aninhados numa sequência de edição), vídeo e áudio vinculados, cor por aparelho, marcadores nos clipes para conferir |
+| DaVinci Resolve | xmeml por sessão + OTIO (+ FCPXML multicâmera) | importa como timeline; multicâmera pelo .fcpxml no Resolve 18+ |
 | Final Cut Pro | FCPXML 1.10 | projeto em camadas + clipe multicâmera (um ângulo por aparelho); áudio sem vídeo com precisão de amostra (início no quadro, ajuste no corte de entrada) |
 | Avid Media Composer | ALE + EDL | tempo sincronizado no Auxiliary TC1 para agrupar |
 | Vegas Pro, Lightworks | xmeml por sessão | |

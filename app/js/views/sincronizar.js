@@ -35,6 +35,7 @@ function settings() {
         [0, 'Não separar'],
         [10, '10 min'],
         [20, '20 min'],
+        [30, '30 min'],
         [60, '1 hora'],
         [240, '4 horas'],
       ])}</div>

@@ -5,13 +5,13 @@ import { groupDevices } from './media/devices.js'
 import { snapRate } from './time.js'
 
 export const DEFAULT_SYNC = { mode: 'auto', sharedTC: false, useDate: true, chronological: true, drift: true, minConf: 0.4, sessionGap: 20, seqFps: 24 }
-export const DEFAULT_EXPORT = { root: '', pathStyle: 'auto', fps: 'auto', size: 'auto', start: '01:00:00:00', camAudio: 'keep', recChannels: 'all', fcp: 'both', includeUnsynced: true, splitSessions: true }
+export const DEFAULT_EXPORT = { root: '', pathStyle: 'auto', fps: 'auto', size: 'auto', start: '01:00:00:00', camAudio: 'keep', recChannels: 'all', fcp: 'both', multicam: true, includeUnsynced: true, splitSessions: true }
 
 const uid = () => Math.random().toString(36).slice(2, 10)
 
 export function newProject(name = 'Projeto sem nome') {
   const now = Date.now()
-  return { v: 1, id: 'p' + uid(), name, createdAt: now, updatedAt: now, clips: [], devices: [], ignored: [], sync: { ...DEFAULT_SYNC }, export: { ...DEFAULT_EXPORT }, result: null, sessions: [] }
+  return { v: 1, id: 'p' + uid(), name, type: null, createdAt: now, updatedAt: now, clips: [], devices: [], ignored: [], sync: { ...DEFAULT_SYNC }, export: { ...DEFAULT_EXPORT }, result: null, sessions: [] }
 }
 
 export function clipFromScan(m) {
