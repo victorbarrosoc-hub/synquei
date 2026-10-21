@@ -1,6 +1,6 @@
 // Sincronizar: ajustes do método, o botão e o andamento ao vivo (áudio lido, comparação, resultado).
 
-import { S, changed, runSync, hasMedia, peaksOf } from '../store.js'
+import { S, changed, runSync, hasMedia, peaksOf, stopSync, skipClip } from '../store.js'
 import { h, icon, plural, toast, drawPeaks, $, $$, uiDark } from '../util.js'
 import { devColor } from '../media/devices.js'
 import { buildSessions, stats } from '../project.js'
@@ -85,7 +85,7 @@ function clipList() {
       let pct = 0
       if (s) {
         pct = Math.round(s.p * 100)
-        label = s.st === 'lendo' ? `${pct}%` : s.st === 'ok' ? 'áudio lido' : 'sem áudio'
+        label = estadoClipe(s)
       } else if (c.sync) {
         pct = 100
         label = c.sync.method.startsWith('audio') ? `${Math.round(c.sync.conf * 100)}%` : c.sync.method === 'timecode' ? 'timecode' : c.sync.method === 'date' ? 'data' : c.sync.method === 'linked' ? 'par' : 'manual'
@@ -94,10 +94,23 @@ function clipList() {
         pct = 100
         label = 'áudio lido'
       } else if (!hasMedia(c)) label = 'sem mídia'
-      return `<div class="cp" data-cp="${c.id}"><i class="dot" style="--c:${color}"></i><div><div class="name">${h(c.name)}</div><div class="bar"><i style="--p:${pct}%"></i></div></div><span class="st">${h(label)}</span></div>`
+      const lendo = s && s.st === 'lendo' && S.sync.running
+      return `<div class="cp" data-cp="${c.id}"><i class="dot" style="--c:${color}"></i><div><div class="name">${h(c.name)}</div><div class="bar"><i style="--p:${pct}%"></i></div></div><span class="st">${h(label)}</span><button class="cp-pular" data-act="pular" data-id="${c.id}" title="Pular a leitura deste clipe: ele entra pelo timecode ou pela data, ou fica de fora para conferir" ${lendo ? '' : 'hidden'}>Pular</button></div>`
     })
   return rows.join('')
 }
+
+const estadoClipe = (s) => (s.st === 'lendo' ? `${Math.round(s.p * 100)}%` : s.st === 'ok' ? 'áudio lido' : s.st === 'pulado' ? 'pulado' : 'sem áudio')
+
+/** "2:07" desde que começou. */
+function decorrido() {
+  const t0 = S.sync.startedAt
+  if (!t0) return ''
+  const s = Math.max(0, Math.round((Date.now() - t0) / 1000))
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+const leadRodando = () => `Rodando há ${decorrido()}. Pode continuar usando o app; se precisar, pare a qualquer momento: o áudio já lido fica guardado.`
 
 function results() {
   const p = S.project
@@ -128,8 +141,8 @@ export default {
     const withMedia = ready.filter(hasMedia).length
     const run = S.sync.running
     const can = withMedia > 0 && !S.probe.active
-    const title = run ? 'Sincronizando…' : p.result ? 'Sincronizado.' : 'Tudo pronto para sincronizar.'
-    const lead = run ? 'Pode continuar usando o app. O som de cada clipe é lido direto do arquivo, sem enviar nada.' : p.result ? `Rodou ${new Date(p.result.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Mudou algum ajuste? Rode de novo: o áudio já lido não é lido outra vez.` : `${plural(ready.length, 'clipe', 'clipes')} em ${plural(p.devices.length, 'aparelho', 'aparelhos')}.`
+    const title = run ? 'Sincronizando…' : p.result ? 'Sincronizado.' : S.sync.parada ? 'Sincronização parada.' : 'Tudo pronto para sincronizar.'
+    const lead = run ? leadRodando() : S.sync.parada && !p.result ? 'Sincronização parada. Rode de novo quando quiser: o áudio já lido não é lido outra vez.' : p.result ? `Rodou ${new Date(p.result.at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Mudou algum ajuste? Rode de novo: o áudio já lido não é lido outra vez.` : `${plural(ready.length, 'clipe', 'clipes')} em ${plural(p.devices.length, 'aparelho', 'aparelhos')}.`
     return `<div class="page tela">
       <header class="page-head"><div><h1>Sincronizar</h1><p class="page-lead">O Synquei compara o som de cada clipe com os outros e acha onde ele se encaixa, com precisão de amostra.</p></div></header>
       <div class="sync-layout">
@@ -139,6 +152,7 @@ export default {
             <div class="lanes-live">${lanes()}</div>
             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
               <button class="btn btn-xl" style="background:#fff;color:#0b0b0c" data-act="run" ${run || !can ? 'disabled' : ''} id="runBtn">${run ? '<span class="spinner"></span>Sincronizando' : `${icon('sync')}${p.result ? 'Sincronizar de novo' : `Sincronizar ${plural(withMedia, 'clipe', 'clipes')}`}`}</button>
+              ${run ? `<button class="btn btn-lg btn-parar" data-act="parar" title="Parar a sincronização">${icon('stop')}Parar</button>` : ''}
               ${!withMedia ? '<span style="color:rgba(255,255,255,.6);font-size:13px">Solte a mídia de novo na aba Mídia para sincronizar.</span>' : ''}
             </div>
             <div class="phases" id="phases">${phases()}</div>
@@ -162,8 +176,12 @@ export default {
       const el = document.querySelector(`[data-cp="${id}"]`)
       if (!el) continue
       el.querySelector('.bar i').style.setProperty('--p', Math.round(s.p * 100) + '%')
-      el.querySelector('.st').textContent = s.st === 'lendo' ? `${Math.round(s.p * 100)}%` : s.st === 'ok' ? 'áudio lido' : 'sem áudio'
+      el.querySelector('.st').textContent = estadoClipe(s)
+      const pular = el.querySelector('.cp-pular')
+      if (pular) pular.hidden = !(s.st === 'lendo' && S.sync.running)
     }
+    const lead = $('#syncLead')
+    if (lead && S.sync.running) lead.textContent = leadRodando()
   },
   after(root) {
     for (const cv of $$('canvas[data-lane]', root)) {
@@ -179,6 +197,15 @@ export default {
         if (st) toast(st.unsynced ? `${st.total - st.unsynced} de ${st.total} clipes sincronizados` : `${st.total} clipes sincronizados`)
       } catch (e) {
         toast(e.message || 'Algo deu errado', { icon: 'warn' })
+      }
+    },
+    parar() {
+      if (stopSync()) toast('Sincronização parada. O áudio já lido fica guardado.', { icon: 'info' })
+    },
+    pular(el) {
+      if (skipClip(el.dataset.id)) {
+        el.hidden = true
+        toast('Clipe pulado: ele entra pelo timecode ou pela data, ou fica de fora para conferir', { icon: 'info' })
       }
     },
     mode(el) {

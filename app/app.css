@@ -3849,3 +3849,54 @@ body.tl-cheia .mon-angs {
   overflow-y: auto;
   scrollbar-width: none;
 }
+
+/* ───────────── parar a sincronização ───────────── */
+.btn-parar {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+.btn-parar:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--err) 80%, transparent);
+  box-shadow: none;
+}
+.btn-parar .icon {
+  width: 14px;
+  height: 14px;
+}
+.cp-pular {
+  margin-left: 8px;
+  padding: 3px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: none;
+}
+.cp-pular:hover {
+  background: color-mix(in srgb, var(--warn) 22%, transparent);
+  color: var(--warn-text);
+}
+.atividade-parar {
+  margin-left: auto;
+  padding: 2px 9px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--err) 14%, transparent);
+  color: var(--err-text);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: none;
+}
+.atividade-parar:hover {
+  background: color-mix(in srgb, var(--err) 24%, transparent);
+}
+.cp {
+  grid-template-columns: 10px minmax(0, 1fr) 90px auto;
+}

@@ -1,6 +1,6 @@
 // Synquei — app. Módulos ES sem build: rotas por hash, uma tela por aba, eventos delegados.
 
-import { S, on, changed, loadIndex, addEntries, runSync, save, createProject, applyType, closeProject } from './store.js'
+import { S, on, changed, loadIndex, addEntries, runSync, save, createProject, applyType, closeProject, stopSync } from './store.js'
 import { escolherTipo } from './tipo-picker.js'
 import { tipoDe } from './tipos.js'
 import { iniciarAtualizacao, acoesAtualizacao } from './atualizacao.js'
@@ -156,6 +156,8 @@ function activity() {
   box.classList.toggle('is-ok', !live && !!(S.project && S.project.result))
   const t = $('.atividade-txt', box)
   if (t.textContent !== txt) t.textContent = txt
+  const parar = $('.atividade-parar', box)
+  if (parar) parar.hidden = !S.sync.running
 }
 
 // dica flutuante para [data-tip] (gráficos, barras, segmentos)
@@ -214,6 +216,10 @@ document.addEventListener('click', (e) => {
   if (act === 'novo') return novoProjeto()
   if (act === 'tipo') return pedirTipo(false)
   if (act === 'fechar') return fecharProjeto()
+  if (act === 'parar-sync') {
+    if (stopSync()) toast('Sincronização parada. O áudio já lido fica guardado.', { icon: 'info' })
+    return
+  }
   if (acoesAtualizacao[act]) return acoesAtualizacao[act](el, e)
   const v = VIEWS[S.route]
   if (v.acts && v.acts[act]) v.acts[act](el, e)
@@ -357,6 +363,11 @@ addEventListener('keydown', (e) => {
   if (mod && e.key.toLowerCase() === 'o') {
     e.preventDefault()
     return pick('#pickFolder')
+  }
+  if (mod && e.key === '.' && S.sync.running) {
+    e.preventDefault()
+    if (stopSync()) toast('Sincronização parada. O áudio já lido fica guardado.', { icon: 'info' })
+    return
   }
   if (mod && e.key === 'Enter' && S.project) {
     e.preventDefault()

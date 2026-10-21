@@ -1,6 +1,6 @@
 // Modo offline do Synquei: guarda o site e o app na primeira visita. HTML vem da rede quando dá (para pegar
 // versões novas); o resto vem do cache e é atualizado em segundo plano.
-const CACHE = 'synquei-v4'
+const CACHE = 'synquei-v5'
 const CORE = [
   '/',
   '/site.css',
