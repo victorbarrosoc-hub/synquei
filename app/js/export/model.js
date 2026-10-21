@@ -178,7 +178,7 @@ function timeline(name, clips, base, opts, devOf, devIndex, project) {
     vl.forEach((l, i) => video.push({ label: vl.length > 1 ? `${dev.label} ${i + 1}` : dev.label, device: dev, items: l.items }))
     const alist = list.filter((it) => channelsOf(it.clip) > 0 && it.clip.audioStatus !== 'none')
     if (!alist.length) continue
-    const isRec = dev.kind === 'recorder' || dev.kind === 'phone'
+    const isRec = dev.kind === 'recorder' || alist.every((it) => it.clip.kind === 'audio')
     const maxCh = Math.max(...alist.map((it) => channelsOf(it.clip)))
     const chs = isRec ? (opts.recChannels === '2' ? Math.min(2, maxCh) : Math.min(8, maxCh)) : Math.min(2, maxCh)
     const al = lanesOf(alist)
