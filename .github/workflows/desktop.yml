@@ -113,15 +113,9 @@ jobs:
           Get-Content $env:SYNQUEI_SMOKE_SAIDA -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { exit 1 }
           if (-not (Select-String -Path $env:SYNQUEI_SMOKE_SAIDA -Pattern '^SMOKE OK$' -Quiet)) { exit 1 }
+      # O SHA-256 vai para o Release junto do instalador (artefatos do Actions têm cota de armazenamento).
       - if: github.event_name != 'pull_request'
-        run: node scripts/release.mjs nomear ${{ matrix.plataforma }} dist sha256
-      - if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: sha256-${{ matrix.plataforma }}
-          path: sha256/
-          retention-days: 1
-          if-no-files-found: error
+        run: node scripts/release.mjs nomear ${{ matrix.plataforma }} dist dist
       - if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
@@ -131,6 +125,7 @@ jobs:
           files: |
             dist/Synquei-*-mac-universal.dmg
             dist/Synquei-*-windows-setup.exe
+            dist/Synquei-sha256-*.json
           fail_on_unmatched_files: false
           body: Instaladores gerados automaticamente a partir da main. Sem assinatura da Apple/Microsoft por enquanto; o site ensina a instalar (synquei.vercel.app/#baixar).
 
@@ -147,11 +142,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          pattern: sha256-*
-          path: sha256
-          merge-multiple: true
+      - run: gh release download app-desktop -R "$GITHUB_REPOSITORY" -p "Synquei-sha256-b${GITHUB_RUN_NUMBER}-*.json" -D sha256
+        env:
+          GH_TOKEN: ${{ github.token }}
       - run: node scripts/release.mjs versao sha256 versao.json
       - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:

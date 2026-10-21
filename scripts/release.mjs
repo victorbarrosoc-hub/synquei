@@ -2,9 +2,10 @@
 //
 //   node scripts/release.mjs nomear <mac|windows> <dist> <saida>
 //       põe o número do build no nome do instalador (Synquei-1.0.0-b42-mac-universal.dmg) e grava o SHA-256 em
-//       <saida>/<plataforma>.json. Com o build no nome, o build seguinte não troca o arquivo que o site está entregando.
+//       <dist>/Synquei-sha256-b42-<plataforma>.json (vai para o Release junto do instalador). Com o build no nome, o
+//       build seguinte não troca o arquivo que o site está entregando.
 //   node scripts/release.mjs versao <pasta-dos-sha> <versao.json>
-//       junta os dois SHA-256 no versao.json que o site serve em /baixar/versao (os instaladores de uma linha conferem).
+//       (a pasta vem do Release: gh release download app-desktop -p 'Synquei-sha256-b42-*') junta os dois SHA-256 no versao.json que o site serve em /baixar/versao (os instaladores de uma linha conferem).
 //   node scripts/release.mjs limpar <build>
 //       tira do Release os instaladores de builds antigos (fica o atual e os dois anteriores).
 
@@ -35,12 +36,17 @@ async function nomear(plataforma, dist, saida) {
   await fs.rename(path.join(dist, achado), path.join(dist, nome))
   const hash = await sha256(path.join(dist, nome))
   await fs.mkdir(saida, { recursive: true })
-  await fs.writeFile(path.join(saida, `${plataforma}.json`), JSON.stringify({ arquivo: nome, sha256: hash }))
+  await fs.writeFile(path.join(saida, `Synquei-sha256-b${build()}-${plataforma}.json`), JSON.stringify({ arquivo: nome, sha256: hash }))
   console.log(`${nome} ${hash}`)
 }
 
 async function versao(pasta, out) {
-  const ler = async (p) => JSON.parse(await fs.readFile(path.join(pasta, `${p}.json`), 'utf8'))
+  const files = await fs.readdir(pasta)
+  const ler = async (p) => {
+    const f = files.find((x) => x.endsWith(`-b${build()}-${p}.json`))
+    if (!f) throw new Error(`SHA-256 de ${p} do build ${build()} não está em ${pasta}`)
+    return JSON.parse(await fs.readFile(path.join(pasta, f), 'utf8'))
+  }
   const mac = await ler('mac')
   const win = await ler('windows')
   const pkg = JSON.parse(await fs.readFile('package.json', 'utf8'))
