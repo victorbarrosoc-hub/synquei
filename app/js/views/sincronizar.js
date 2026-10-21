@@ -1,8 +1,8 @@
 // Sincronizar: ajustes do método, o botão e o andamento ao vivo (áudio lido, comparação, resultado).
 
 import { S, changed, runSync, hasMedia, peaksOf } from '../store.js'
-import { h, icon, plural, toast, drawPeaks, $, $$ } from '../util.js'
-import { PALETTE } from '../media/devices.js'
+import { h, icon, plural, toast, drawPeaks, $, $$, uiDark } from '../util.js'
+import { devColor } from '../media/devices.js'
 import { buildSessions, stats } from '../project.js'
 import { go } from '../main.js'
 
@@ -57,7 +57,7 @@ function lanes() {
     .map((d, i) => {
       const clip = p.clips.find((c) => c.deviceId === d.id && peaksOf(c))
       const shift = done ? 0 : ((i * 37) % 23) - 11
-      return `<div class="lane-live"><span>${h(d.label)}</span><canvas data-lane="${clip ? clip.id : ''}" data-color="${PALETTE[d.color % PALETTE.length]}" style="transform:translateX(${shift}%)"></canvas></div>`
+      return `<div class="lane-live"><span>${h(d.label)}</span><canvas data-lane="${clip ? clip.id : ''}" data-color="${devColor(d, true)}" style="transform:translateX(${shift}%)"></canvas></div>`
     })
     .join('')
 }
@@ -79,7 +79,7 @@ function clipList() {
     .map((c) => {
       const s = st[c.id]
       const d = p.devices.find((x) => x.id === c.deviceId)
-      const color = d ? PALETTE[d.color % PALETTE.length] : '#888'
+      const color = devColor(d, uiDark())
       let label = ''
       let pct = 0
       if (s) {

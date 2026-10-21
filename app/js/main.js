@@ -2,10 +2,12 @@
 
 import { S, on, changed, loadIndex, addEntries, runSync, save } from './store.js'
 import { entriesFromDrop, entriesFromInput } from './media/scan.js'
-import { $, $$, h, icon, toast, plural, download } from './util.js'
-import { PALETTE } from './media/devices.js'
+import { $, $$, h, icon, toast, plural, download, uiDark } from './util.js'
+import { sfx } from './sfx.js'
+import { devColor } from './media/devices.js'
 import { zipAll } from './export/index.js'
 import { safeName } from './export/model.js'
+import inicio from './views/inicio.js'
 import projetos from './views/projetos.js'
 import midia from './views/midia.js'
 import sincronizar from './views/sincronizar.js'
@@ -14,8 +16,11 @@ import exportar from './views/exportar.js'
 import formatos from './views/formatos.js'
 import ajustes from './views/ajustes.js'
 
-const VIEWS = { projetos, midia, sincronizar, linha, exportar, formatos, ajustes }
-const ORDER = ['projetos', 'midia', 'sincronizar', 'linha', 'exportar']
+const VIEWS = { inicio, projetos, midia, sincronizar, linha, exportar, formatos, ajustes }
+const ORDER = ['inicio', 'midia', 'sincronizar', 'linha', 'exportar']
+// ordem da barra lateral: decide se a tela entra pela direita ou pela esquerda
+const SEQ = ['inicio', 'midia', 'sincronizar', 'linha', 'exportar', 'projetos', 'formatos', 'ajustes']
+const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function go(route, force) {
   if (location.hash !== `#/${route}`) location.hash = `#/${route}`
@@ -27,38 +32,69 @@ function routeFromHash() {
   if (r === 'exemplo') {
     if (!demoLoading) {
       demoLoading = true
-      history.replaceState(null, '', '#/projetos')
+      history.replaceState(null, '', '#/inicio')
       import('./demo.js')
         .then((m) => m.loadDemo())
-        .then(() => go('midia'))
+        .then(() => go('inicio', true))
         .finally(() => (demoLoading = false))
     }
-    return 'projetos'
+    return 'inicio'
   }
-  return VIEWS[r] ? r : S.project ? 'midia' : 'projetos'
+  return VIEWS[r] ? r : 'inicio'
 }
 
 let lastRoute = null
 let demoLoading = false
+let enterT = 0
 function render() {
   const route = routeFromHash()
   S.route = route
   const view = VIEWS[route]
   const root = $('#view')
-  const keepScroll = lastRoute === route ? scrollY : 0
+  const entering = lastRoute !== route
+  const keepScroll = entering ? 0 : scrollY
+  // a tela só anima ao chegar; quando ela se redesenha (progresso, um clique), fica parada
+  if (entering) {
+    clearTimeout(enterT)
+    const a = SEQ.indexOf(lastRoute)
+    const b = SEQ.indexOf(route)
+    root.dataset.dir = a < 0 || a === b ? '' : b > a ? 'fwd' : 'back'
+    root.classList.remove('is-still')
+    enterT = setTimeout(() => root.classList.add('is-still'), 1400)
+  } else root.classList.add('is-still')
   root.innerHTML = view.render()
   if (view.after) view.after(root)
-  if (lastRoute !== route) {
+  if (entering) {
     scrollTo(0, 0)
     document.title = `${view.title} · Synquei`
+    countUp(root)
   } else scrollTo(0, keepScroll)
   lastRoute = route
+  hideTip()
   chrome()
 }
 
-/** Barra lateral e de abas: aba ativa, contadores e o cartão do projeto. */
+/** Números que sobem até o valor ao entrar na tela. */
+function countUp(root) {
+  const els = $$('[data-count-to]', root)
+  if (!els.length || calm()) return
+  const t0 = performance.now()
+  const dur = 750
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / dur)
+    const e = 1 - Math.pow(1 - k, 3)
+    for (const el of els) if (el.isConnected) el.textContent = Math.round(+el.dataset.countTo * e).toLocaleString('pt-BR')
+    if (k < 1) requestAnimationFrame(step)
+  }
+  for (const el of els) el.textContent = '0'
+  requestAnimationFrame(step)
+}
+
+/** Barra lateral e de abas: aba ativa (com a pílula que desliza), contadores, atividade e o cartão do projeto. */
 function chrome() {
-  for (const a of $$('[data-r]')) a.classList.toggle('is-on', a.dataset.r === S.route)
+  for (const a of $$('[data-r]')) a.classList.toggle('is-on', a.dataset.r === S.route && !!a.closest('.sidebar, .tabbar'))
+  movePill()
+  activity()
   const p = S.project
   const mb = $('[data-badge="midia"]')
   const sb = $('[data-badge="sincronizar"]')
@@ -75,10 +111,93 @@ function chrome() {
   }
   const card = $('#projCard')
   if (card) {
-    card.innerHTML = p
-      ? `<a class="proj-card" href="#/projetos"><b>${h(p.name)}</b><span class="sub">${plural(p.clips.length, 'clipe', 'clipes')}${p.result ? ` · ${p.result.stats.total - p.result.stats.unsynced} na linha` : ''}</span><span class="dots">${p.devices.map((d) => `<i class="dot" style="--c:${PALETTE[d.color % PALETTE.length]}" title="${h(d.label)}"></i>`).join('')}</span></a>`
+    const html = p
+      ? `<a class="proj-card" href="#/inicio"><b>${h(p.name)}</b><span class="sub">${plural(p.clips.length, 'clipe', 'clipes')}${p.result ? ` · ${p.result.stats.total - p.result.stats.unsynced} na linha` : ''}</span><span class="dots">${p.devices.map((d) => `<i class="dot" style="--c:${devColor(d, uiDark())}" title="${h(d.label)}"></i>`).join('')}</span></a>`
       : ''
+    if (card.innerHTML !== html) card.innerHTML = html
   }
+}
+
+function movePill() {
+  const wrap = $('#navWrap')
+  if (!wrap) return
+  const pill = $('.nav-pill', wrap)
+  const on = $('.nav-item.is-on', wrap)
+  if (!on) return pill.classList.remove('is-on')
+  const first = !pill.classList.contains('is-on') && !pill.style.transform
+  pill.style.transition = first ? 'none' : ''
+  // posição relativa ao bloco todo (cada grupo .nav tem o próprio contexto)
+  const y = on.getBoundingClientRect().top - wrap.getBoundingClientRect().top
+  pill.style.transform = `translateY(${y}px)`
+  pill.style.height = `${on.offsetHeight}px`
+  pill.classList.add('is-on')
+}
+
+/** O medidor da barra lateral: cinco LEDs que dançam enquanto o app lê arquivos ou sincroniza. */
+function activity() {
+  const box = $('#atividade')
+  if (!box) return
+  let txt = 'Pronto'
+  let live = false
+  let pct = null
+  if (S.sync.running) {
+    live = true
+    pct = S.sync.total ? Math.round((S.sync.done / S.sync.total) * 100) : 0
+    txt = S.sync.phase === 'match' ? `Comparando · ${pct}%` : `Lendo o áudio · ${S.sync.done}/${S.sync.total}`
+  } else if (S.probe.active) {
+    live = true
+    txt = `Reconhecendo · ${S.probe.done}/${S.probe.total}`
+  } else if (S.project && S.project.result) txt = 'Sincronizado'
+  else if (S.project) txt = 'Falta sincronizar'
+  box.classList.toggle('is-live', live)
+  box.classList.toggle('is-ok', !live && !!(S.project && S.project.result))
+  const t = $('.atividade-txt', box)
+  if (t.textContent !== txt) t.textContent = txt
+}
+
+// dica flutuante para [data-tip] (gráficos, barras, segmentos)
+const tipEl = () => $('#tip')
+function hideTip() {
+  const t = tipEl()
+  if (t) t.hidden = true
+}
+document.addEventListener('pointerover', (e) => {
+  const el = e.target.closest && e.target.closest('[data-tip]')
+  const t = tipEl()
+  if (!t) return
+  if (!el) return hideTip()
+  t.textContent = el.dataset.tip
+  t.hidden = false
+})
+document.addEventListener('pointermove', (e) => {
+  const t = tipEl()
+  if (t && !t.hidden) {
+    const w = t.offsetWidth
+    const x = Math.min(innerWidth - w - 8, Math.max(8, e.clientX - w / 2))
+    const y = e.clientY - t.offsetHeight - 14
+    t.style.transform = `translate(${x}px, ${y < 8 ? e.clientY + 18 : y}px)`
+  }
+  // luz que segue o ponteiro nos cartões do painel
+  const card = e.target.closest && e.target.closest('.pn-cartao, .pn-atalho, .pn-soltar')
+  if (card) {
+    const r = card.getBoundingClientRect()
+    card.style.setProperty('--mx', `${e.clientX - r.left}px`)
+    card.style.setProperty('--my', `${e.clientY - r.top}px`)
+  }
+})
+addEventListener('scroll', hideTip, { passive: true })
+
+/** Sincronia pronta: um anel de faixas coloridas que se abre no meio da tela. */
+let lastFinish = null
+function celebrate() {
+  if (calm()) return
+  const el = document.createElement('div')
+  el.className = 'festa'
+  el.setAttribute('aria-hidden', 'true')
+  const cores = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#9085e9']
+  el.innerHTML = `<div class="festa-check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>${Array.from({ length: 18 }, (_, i) => `<i style="--a:${i * 20}deg;--c:${cores[i % cores.length]};--d:${(i % 3) * 40}ms"></i>`).join('')}`
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 1600)
 }
 
 // ───────── eventos delegados ─────────
@@ -124,7 +243,8 @@ for (const sel of ['#pickFolder', '#pickFiles']) {
 
 async function importEntries(list) {
   if (!list.length) return
-  if (S.route === 'projetos' || !S.project) go('midia')
+  sfx.pop()
+  if (S.route === 'projetos' || S.route === 'inicio' || !S.project) go('midia')
   const r = await addEntries(list)
   if (!r) return
   const parts = []
@@ -197,7 +317,13 @@ addEventListener('keydown', (e) => {
 
 // ───────── início ─────────
 let liveRaf = 0
-on('change', () => render())
+on('change', () => {
+  if (S.sync.finishedAt && S.sync.finishedAt !== lastFinish) {
+    lastFinish = S.sync.finishedAt
+    celebrate()
+  }
+  render()
+})
 on('progress', () => {
   cancelAnimationFrame(liveRaf)
   liveRaf = requestAnimationFrame(() => {
@@ -211,13 +337,16 @@ addEventListener('hashchange', render)
 let resizeT = 0
 addEventListener('resize', () => {
   clearTimeout(resizeT)
-  resizeT = setTimeout(() => S.route === 'linha' && render(), 200)
+  resizeT = setTimeout(() => {
+    movePill()
+    if (S.route === 'linha') render()
+  }, 200)
 })
 addEventListener('beforeunload', () => save(true))
-// no app de desktop a marca leva aos projetos (não ao site)
+// no app de desktop a marca leva ao início (não ao site)
 if (window.synqueiDesktop) {
   const b = $('.brand')
-  if (b) b.setAttribute('href', '#/projetos')
+  if (b) b.setAttribute('href', '#/inicio')
 }
 loadIndex()
 render()

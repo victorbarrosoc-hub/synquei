@@ -2,7 +2,7 @@
 
 import { S, openProject, deleteProject, renameProject, importProjectJson } from '../store.js'
 import { h, icon, ago, plural, modal, toast } from '../util.js'
-import { PALETTE } from '../media/devices.js'
+import { devColor } from '../media/devices.js'
 import { loadDemo } from '../demo.js'
 import { go } from '../main.js'
 
@@ -28,13 +28,13 @@ function projCard(e, i) {
   const status = st ? (st.unsynced ? `<span class="chip chip-warn">${st.total - st.unsynced}/${st.total} sincronizados</span>` : `<span class="chip chip-ok">${icon('check')}Sincronizado</span>`) : `<span class="chip">Falta sincronizar</span>`
   const lanes = e.devices
     .slice(0, 5)
-    .map((d, k) => `<i style="--c:${PALETTE[d.color % PALETTE.length]};width:${Math.max(18, (d.n / total) * 100)}%;margin-left:${(k * 13) % 40}%"></i>`)
+    .map((d, k) => `<i style="--c:${devColor(d, true)};width:${Math.max(18, (d.n / total) * 100)}%;margin-left:${(k * 13) % 40}%"></i>`)
     .join('')
   return `<article class="proj" role="button" tabindex="0" data-act="open" data-id="${h(e.id)}" style="--i:${i}">
     <div class="proj-top"><div><h3>${h(e.name)}</h3><p class="sub" style="font-size:12.5px">${ago(e.updatedAt)}</p></div><div style="display:flex;gap:4px;align-items:center">${status}<button class="icon-btn" data-act="del" data-id="${h(e.id)}" aria-label="Apagar projeto">${icon('trash')}</button></div></div>
     <div class="lanes" aria-hidden="true">${lanes || '<i style="--c:#444;width:40%"></i>'}</div>
     <div class="proj-meta"><span>${plural(e.clips, 'clipe', 'clipes')}</span><span>·</span><span>${plural(e.devices.length, 'aparelho', 'aparelhos')}</span>
-      <span class="dots" style="margin-left:auto">${e.devices.map((d) => `<i class="dot" style="--c:${PALETTE[d.color % PALETTE.length]}" title="${h(d.label)}"></i>`).join('')}</span></div>
+      <span class="dots" style="margin-left:auto">${e.devices.map((d) => `<i class="dot" style="--c:${devColor(d, true)}" title="${h(d.label)}"></i>`).join('')}</span></div>
   </article>`
 }
 

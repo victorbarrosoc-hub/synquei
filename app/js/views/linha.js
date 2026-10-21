@@ -3,8 +3,9 @@
 
 import { S, changed, peaksOf } from '../store.js'
 import { h, icon, drawPeaks, confColor, plural, $, $$ } from '../util.js'
-import { PALETTE } from '../media/devices.js'
+import { devColor } from '../media/devices.js'
 import { nudge, methodLabel } from '../project.js'
+import { sfx } from '../sfx.js'
 import { duration, offsetLabel, rateFps, snapRate } from '../time.js'
 import { go } from '../main.js'
 
@@ -123,14 +124,14 @@ export default {
             <div class="tl-bar"><button class="icon-btn" data-act="zoom" data-v="0.66" aria-label="Afastar">${icon('zoom-out')}</button><input type="range" min="0" max="100" value="${Math.round(Math.log(pps / fit) / Math.log(60) * 100)}" data-input="zoom" aria-label="Zoom" data-fit="${fit}"/><button class="icon-btn" data-act="zoom" data-v="1.5" aria-label="Aproximar">${icon('zoom-in')}</button><button class="icon-btn" data-act="fit" aria-label="Caber na tela">${icon('fit')}</button><span style="margin-left:auto" class="num">${lab.tc ? 'Timecode' : 'Tempo'} · ${h(String(Math.round(rateFps(rate) * 1000) / 1000))} qps</span></div>
             ${
               rows.length
-                ? `<div class="tl-body"><div class="tl-heads">${rows.map((r) => `<div class="tl-head" style="height:${r.lanes * LANE}px"><i class="dot" style="--c:${PALETTE[r.d.color % PALETTE.length]}"></i><span title="${h(r.d.label)}">${h(r.d.label)}</span></div>`).join('')}</div>
+                ? `<div class="tl-body"><div class="tl-heads">${rows.map((r) => `<div class="tl-head" style="height:${r.lanes * LANE}px"><i class="dot" style="--c:${devColor(r.d, true)}"></i><span title="${h(r.d.label)}">${h(r.d.label)}</span></div>`).join('')}</div>
               <div class="tl-scroll" id="tlScroll"><div style="width:${width}px;position:relative"><div class="tl-ruler">${ticks.join('')}</div>
               ${rows
                 .map(
                   (r) =>
                     `<div class="tl-row" style="height:${r.lanes * LANE}px">${r.place
                       .map(({ c, lane }) => {
-                        const color = PALETTE[r.d.color % PALETTE.length]
+                        const color = devColor(r.d, true)
                         const cf = confColor(c.sync.conf, c.sync.method)
                         const low = c.sync.conf < 0.5 || c.sync.method === 'date'
                         return `<div class="tl-clip ${S.ui.selected === c.id ? 'is-sel' : ''} ${low ? 'low' : ''}" data-clip="${c.id}" style="--c:${color};--cf:${cf};left:${(c.sync.pos - s.start) * pps}px;width:${Math.max(4, (c.duration || 0) * pps)}px;top:${lane * LANE + 6}px" title="${h(c.name)} · ${Math.round(c.sync.conf * 100)}%"><span class="lbl">${h(c.name)}</span><i class="cf"></i>${peaksOf(c) ? `<canvas data-peaks="${c.id}"></canvas>` : ''}</div>`
@@ -183,6 +184,7 @@ export default {
     },
     nudge(el) {
       nudge(S.project, S.ui.selected, +el.dataset.v)
+      sfx.tick()
       changed()
     },
     reset() {
@@ -212,6 +214,7 @@ export default {
       const rate = seqRate(s.clipIds.map((id) => S.project.clips.find((x) => x.id === id)).filter(Boolean))
       const step = e.altKey ? 0.001 : 1 / rateFps(rate)
       nudge(S.project, c.id, e.key === 'ArrowLeft' ? -step : step)
+      sfx.tick()
       changed()
       return true
     }
@@ -255,6 +258,7 @@ function onDown(e) {
     drag = null
     if (moved) {
       nudge(S.project, id, dx / pps)
+      sfx.snap()
       S.ui.selected = id
     } else S.ui.selected = S.ui.selected === id ? null : id
     changed()
@@ -316,7 +320,7 @@ function drawCompare(cv) {
   }
   const dev = p.devices.find((x) => x.id === b.deviceId)
   draw(sa, d, 'rgba(255,255,255,0.7)', peak(sa, d), true)
-  draw(sb, 0, dev ? PALETTE[dev.color % PALETTE.length] : '#0a84ff', peak(sb, 0), false)
+  draw(sb, 0, dev ? devColor(dev, true) : '#0a84ff', peak(sb, 0), false)
   ctx.fillStyle = 'rgba(255,255,255,0.18)'
   ctx.fillRect(0, hh / 2, w, 1)
 }

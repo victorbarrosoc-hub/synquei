@@ -77,20 +77,28 @@
     <div class="shell">
       <aside class="sidebar">
         <a class="brand" href="/" aria-label="Synquei, site"><svg class="brand-mark" aria-hidden="true"><use href="#logo" /></svg><span><b>Syn</b>quei</span></a>
-        <nav class="nav" aria-label="Principal" id="nav">
-          <a class="nav-item" href="#/projetos" data-r="projetos"><svg class="icon"><use href="#i-projects" /></svg><span>Projetos</span></a>
-          <a class="nav-item" href="#/midia" data-r="midia"><svg class="icon"><use href="#i-media" /></svg><span>Mídia</span><span class="badge" data-badge="midia" hidden></span></a>
-          <a class="nav-item" href="#/sincronizar" data-r="sincronizar"><svg class="icon"><use href="#i-sync" /></svg><span>Sincronizar</span><span class="badge" data-badge="sincronizar" hidden></span></a>
-          <a class="nav-item" href="#/linha" data-r="linha"><svg class="icon"><use href="#i-timeline" /></svg><span>Linha do tempo</span></a>
-          <a class="nav-item" href="#/exportar" data-r="exportar"><svg class="icon"><use href="#i-export" /></svg><span>Exportar</span></a>
-        </nav>
-        <nav class="nav" aria-label="Referência">
-          <p class="nav-label eyebrow">Referência</p>
-          <a class="nav-item" href="#/formatos" data-r="formatos"><svg class="icon"><use href="#i-formats" /></svg><span>Formatos</span></a>
-          <a class="nav-item" href="#/ajustes" data-r="ajustes"><svg class="icon"><use href="#i-gear" /></svg><span>Ajustes</span></a>
-        </nav>
+        <div class="nav-wrap" id="navWrap">
+          <span class="nav-pill" aria-hidden="true"></span>
+          <nav class="nav" aria-label="Principal">
+            <a class="nav-item" href="#/inicio" data-r="inicio"><svg class="icon"><use href="#i-home" /></svg><span>Início</span></a>
+          </nav>
+          <nav class="nav" aria-label="Projeto">
+            <p class="nav-label eyebrow">Projeto</p>
+            <a class="nav-item" href="#/midia" data-r="midia"><svg class="icon"><use href="#i-media" /></svg><span>Mídia</span><span class="badge" data-badge="midia" hidden></span></a>
+            <a class="nav-item" href="#/sincronizar" data-r="sincronizar"><svg class="icon"><use href="#i-sync" /></svg><span>Sincronizar</span><span class="badge" data-badge="sincronizar" hidden></span></a>
+            <a class="nav-item" href="#/linha" data-r="linha"><svg class="icon"><use href="#i-timeline" /></svg><span>Linha do tempo</span></a>
+            <a class="nav-item" href="#/exportar" data-r="exportar"><svg class="icon"><use href="#i-export" /></svg><span>Exportar</span></a>
+          </nav>
+          <nav class="nav" aria-label="Biblioteca">
+            <p class="nav-label eyebrow">Biblioteca</p>
+            <a class="nav-item" href="#/projetos" data-r="projetos"><svg class="icon"><use href="#i-projects" /></svg><span>Projetos</span></a>
+            <a class="nav-item" href="#/formatos" data-r="formatos"><svg class="icon"><use href="#i-formats" /></svg><span>Formatos</span></a>
+          </nav>
+        </div>
         <div class="sidebar-foot">
+          <div class="atividade" id="atividade" aria-live="polite"><span class="atividade-led" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="atividade-txt">Pronto</span></div>
           <div id="projCard"></div>
+          <a class="nav-item" href="#/ajustes" data-r="ajustes"><svg class="icon"><use href="#i-gear" /></svg><span>Ajustes</span></a>
           <p class="privacy"><svg class="icon"><use href="#i-lock" /></svg>Nada sai do seu computador</p>
         </div>
       </aside>
@@ -98,7 +106,7 @@
     </div>
 
     <nav class="tabbar" aria-label="Abas">
-      <a href="#/projetos" data-r="projetos"><svg class="icon"><use href="#i-projects" /></svg>Projetos</a>
+      <a href="#/inicio" data-r="inicio"><svg class="icon"><use href="#i-home" /></svg>Início</a>
       <a href="#/midia" data-r="midia"><svg class="icon"><use href="#i-media" /></svg>Mídia</a>
       <a href="#/sincronizar" data-r="sincronizar"><svg class="icon"><use href="#i-sync" /></svg>Sincronizar</a>
       <a href="#/linha" data-r="linha"><svg class="icon"><use href="#i-timeline" /></svg>Linha</a>
@@ -107,6 +115,7 @@
 
     <div class="toasts" id="toasts" aria-live="polite"></div>
     <div id="layer"></div>
+    <div class="tip" id="tip" role="tooltip" hidden></div>
     <input type="file" id="pickFolder" webkitdirectory multiple hidden />
     <input type="file" id="pickFiles" multiple hidden />
     <input type="file" id="pickProject" accept=".synquei,.json,application/json" hidden />

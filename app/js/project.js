@@ -79,7 +79,7 @@ export function regroup(project) {
       const id = 'd' + n
       used.add(id)
       remap[d.id] = id
-      keep.push({ ...d, id, color: (n - 1) % 12 })
+      keep.push({ ...d, id, color: Math.min(n - 1, 8) })
     }
   }
   for (const c of auto) c.deviceId = remap[assign[c.id]]

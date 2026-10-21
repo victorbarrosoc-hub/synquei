@@ -5,6 +5,7 @@ import { scanEntries } from './media/scan.js'
 import { probeWithSidecar } from './media/probe.js'
 import { extractAudio, peaks as mkPeaks } from './media/extract.js'
 import { b64 } from './util.js'
+import { sfx } from './sfx.js'
 
 const IDX = 'synquei:index'
 const KEY = (id) => `synquei:p:${id}`
@@ -252,6 +253,7 @@ export async function runSync() {
   if (!p || S.sync.running) return
   const ready = p.clips.filter((c) => c.status === 'ready')
   S.sync = { running: true, phase: 'audio', done: 0, total: 0, clip: {}, error: null, finishedAt: null, startedAt: Date.now() }
+  sfx.start()
   changed()
   try {
     // 1. áudio de cada clipe (o que ainda não foi lido nesta sessão)
@@ -277,6 +279,7 @@ export async function runSync() {
           c.audioNote = null
           if (!c.duration) c.duration = sig.length / 4000
           S.sync.clip[c.id] = { p: 1, st: 'ok' }
+          sfx.tick()
         } catch (e) {
           c.audioStatus = 'error'
           c.audioNote = e.message || String(e)
@@ -304,6 +307,7 @@ export async function runSync() {
     S.sync.running = false
     S.sync.finishedAt = Date.now()
     S.ui.session = 0
+    sfx.done()
     changed()
     return st
   } catch (e) {
