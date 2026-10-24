@@ -3900,3 +3900,129 @@ body.tl-cheia .mon-angs {
 .cp {
   grid-template-columns: 10px minmax(0, 1fr) 90px auto;
 }
+
+/* ───────────── organizar (só no app de desktop) ───────────── */
+html:not(.is-desktop) .so-desktop {
+  display: none;
+}
+.org-fluxo {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.org-passo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+.org-passo small {
+  color: var(--text-2);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.org-passo-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--fill-2);
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+.org-passo.is-ok .org-passo-ic {
+  background: color-mix(in srgb, var(--ok) 16%, transparent);
+  color: var(--ok-text);
+}
+.org-seta {
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+.org-agora {
+  margin-bottom: 16px;
+}
+.org-agora.is-live .icon {
+  animation: spin 1.4s linear infinite;
+}
+.org-diaria + .org-diaria {
+  margin-top: 18px;
+}
+.org-diaria-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.org-diaria-topo h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.org-diaria-topo .btn {
+  margin-left: auto;
+}
+.org-cartoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.org-cartao {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.org-cartao + .org-cartao {
+  border-top: 1px solid var(--hairline);
+}
+.org-cartao small {
+  display: block;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.org-pastas-trabalho {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 12.5px;
+}
+.org-vazio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.org-vazio > .icon {
+  width: 28px;
+  height: 28px;
+  color: var(--text-3);
+}
+.org-vazio > div {
+  flex: 1;
+}
+@media (max-width: 720px) {
+  .org-fluxo {
+    flex-direction: column;
+  }
+  .org-seta {
+    transform: rotate(90deg);
+  }
+  .org-vazio {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

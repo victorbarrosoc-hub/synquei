@@ -197,6 +197,8 @@ export async function addEntries(entries, { name } = {}) {
   }
   const p = S.project
   const { media, ignored } = scanEntries(entries)
+  // Organizar: de que diária, dono e cartão veio cada arquivo (vem junto da entrada)
+  const orgDe = new Map(entries.filter((e) => e.org).map((e) => [(e.path || e.file.name).replace(/^\/+/, ''), e.org]))
   const known = new Map(p.clips.map((c) => [fileKey(c.relPath, c.size), c]))
   const byName = new Map(p.clips.map((c) => [`${c.name}::${c.size}`, c]))
   const queue = []
@@ -206,7 +208,7 @@ export async function addEntries(entries, { name } = {}) {
     if (old) {
       if (!S.files.has(old.id)) {
         S.files.set(old.id, m.file)
-        const abs = globalThis.synqueiDesktop ? globalThis.synqueiDesktop.pathFor(m.file) : null
+        const abs = absDe(m.file)
         if (abs) old.absPath = abs
         queue.push({ clip: old, m, relink: true })
         relinked++
@@ -215,8 +217,10 @@ export async function addEntries(entries, { name } = {}) {
     }
     const c = clipFromScan(m)
     // app de desktop: caminho completo do arquivo (as exportações não precisam da pasta da mídia)
-    const abs = globalThis.synqueiDesktop ? globalThis.synqueiDesktop.pathFor(m.file) : null
+    const abs = absDe(m.file)
     if (abs) c.absPath = abs
+    const o = orgDe.get(m.relPath)
+    if (o) c.org = o
     p.clips.push(c)
     S.files.set(c.id, m.file)
     queue.push({ clip: c, m })
@@ -227,6 +231,26 @@ export async function addEntries(entries, { name } = {}) {
   changed()
   await probeQueue(queue)
   return { added: queue.length - relinked, relinked, ignored: ignored.length }
+}
+
+// caminho completo: o arquivo vigiado (Organizar) já sabe o dele; o escolhido ou arrastado pergunta ao app de desktop
+const absDe = (file) => file.caminho || (globalThis.synqueiDesktop ? globalThis.synqueiDesktop.pathFor(file) : null)
+
+/** Religa a mídia de um projeto do Organizar pelo caminho de cada clipe (a pasta vigiada não muda de lugar). */
+export async function religarPorCaminho(fazerArquivo) {
+  const p = S.project
+  if (!p) return 0
+  const queue = []
+  for (const c of p.clips) {
+    if (S.files.has(c.id) || !c.absPath) continue
+    const file = fazerArquivo(c)
+    if (!file) continue
+    S.files.set(c.id, file)
+    // religar só refaz o plano de leitura; o que o clipe já sabe (timecode do XML da Sony) continua no projeto
+    queue.push({ clip: c, m: { file, relPath: c.relPath }, relink: true })
+  }
+  await probeQueue(queue)
+  return queue.length
 }
 
 async function probeQueue(queue) {
@@ -245,8 +269,12 @@ async function probeQueue(queue) {
         S.plans.set(clip.id, info)
         if (!job.relink) applyProbe(clip, info, p)
       } catch (e) {
-        clip.status = 'error'
-        clip.error = e.message || String(e)
+        // religar que falhou (arquivo sumiu) não estraga o que já se sabia do clipe
+        if (job.relink) S.files.delete(clip.id)
+        else {
+          clip.status = 'error'
+          clip.error = e.message || String(e)
+        }
       }
       S.probe.done++
       progress()

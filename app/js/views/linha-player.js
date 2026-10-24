@@ -9,6 +9,7 @@ import { S, changed } from '../store.js'
 import { $, h, icon } from '../util.js'
 import { devColor } from '../media/devices.js'
 import { rateFps } from '../time.js'
+import { urlDe, soltarUrl } from '../media/pathfile.js'
 
 const P = {
   ctx: null,
@@ -48,7 +49,7 @@ export function setCtx(ctx) {
 
 function reset(id) {
   pause()
-  for (const u of P.urls.values()) URL.revokeObjectURL(u)
+  for (const u of P.urls.values()) soltarUrl(u)
   for (const v of P.videos.values()) {
     v.el.removeAttribute('src')
     v.el.load()
@@ -85,7 +86,7 @@ function clipAt(row, t) {
 }
 
 function url(c) {
-  if (!P.urls.has(c.id)) P.urls.set(c.id, URL.createObjectURL(S.files.get(c.id)))
+  if (!P.urls.has(c.id)) P.urls.set(c.id, urlDe(S.files.get(c.id)))
   return P.urls.get(c.id)
 }
 

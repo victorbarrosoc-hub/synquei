@@ -1,6 +1,6 @@
 // Modo offline do Synquei: guarda o site e o app na primeira visita. HTML vem da rede quando dá (para pegar
 // versões novas); o resto vem do cache e é atualizado em segundo plano.
-const CACHE = 'synquei-v5'
+const CACHE = 'synquei-v6'
 const CORE = [
   '/',
   '/site.css',
@@ -25,6 +25,7 @@ const CORE = [
   '/app/js/media/formats.js',
   '/app/js/media/mp4.js',
   '/app/js/media/mxf.js',
+  '/app/js/media/pathfile.js',
   '/app/js/media/probe.js',
   '/app/js/media/raw.js',
   '/app/js/media/reader.js',
@@ -32,6 +33,7 @@ const CORE = [
   '/app/js/media/scan.js',
   '/app/js/media/sidecar.js',
   '/app/js/media/ts.js',
+  '/app/js/organizar.js',
   '/app/js/project.js',
   '/app/js/sfx.js',
   '/app/js/store.js',
@@ -51,6 +53,7 @@ const CORE = [
   '/app/js/views/linha-player.js',
   '/app/js/views/linha.js',
   '/app/js/views/midia.js',
+  '/app/js/views/organizar.js',
   '/app/js/views/projetos.js',
   '/app/js/views/sincronizar.js',
   '/app/manifest.webmanifest',

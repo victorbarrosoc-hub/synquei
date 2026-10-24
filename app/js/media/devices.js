@@ -51,7 +51,11 @@ export function groupDevices(clips) {
     const letter = camLetter(c.name)
     let key
     let label
-    if (useTops && tops[i]) {
+    if (c.org && c.org.dono) {
+      // Organizar: o dono que o SOBEDESCE gravou ("Aladim - FX30") é o aparelho, em todas as diárias
+      key = `org:${c.org.dono}|${isAudio ? 'a' : 'v'}`
+      label = c.org.dono
+    } else if (useTops && tops[i]) {
       key = `top:${tops[i]}|${isAudio ? 'a' : 'v'}`
       label = tops[i]
     } else if (model) {
@@ -67,7 +71,7 @@ export function groupDevices(clips) {
       key = isAudio ? 'k:audio' : 'k:video'
       label = isAudio ? 'Áudio' : 'Vídeo'
     }
-    if (!groups.has(key)) groups.set(key, { key, label, clips: [], brand: (c.device && c.device.make) || (h && h.brand) || null, model, kindHint: h ? h.kind : null })
+    if (!groups.has(key)) groups.set(key, { key, label, clips: [], brand: (c.device && c.device.make) || (h && h.brand) || null, model, kindHint: h ? h.kind : null, cor: c.org && c.org.cor != null ? c.org.cor : null })
     groups.get(key).clips.push(c)
   })
 
@@ -87,7 +91,8 @@ export function groupDevices(clips) {
   const assign = {}
   list.forEach(({ g, kind }, i) => {
     const id = 'd' + (i + 1)
-    devices.push({ id, label: g.label, kind, brand: g.brand, model: g.model, color: Math.min(i, 8), key: g.key })
+    // a cor do dono no Organizar vale em todas as diárias (a mesma câmera, a mesma cor no Synquei e no DaVinci)
+    devices.push({ id, label: g.label, kind, brand: g.brand, model: g.model, color: Math.min(g.cor != null ? g.cor : i, 8), fixa: g.cor != null, key: g.key })
     for (const c of g.clips) assign[c.id] = id
   })
   return { devices, assign }

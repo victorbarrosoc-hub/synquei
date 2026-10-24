@@ -92,7 +92,7 @@ O mesmo app, empacotado com Electron (`desktop/main.cjs`). Vantagens sobre o nav
 
 - **Caminho completo** de cada arquivo vai para as exportações: o editor acha a mídia sem revincular (a pasta da mídia nem aparece).
 - **AAC e H.264 sempre**: o Chromium do Electron traz os decodificadores (áudio de celular e GoPro, miniaturas).
-- Menu em português, atalhos (⌘N, ⌘O, ⌘1–6), janela integrada à barra lateral no Mac.
+- Menu em português, atalhos (⌘N, ⌘O, ⌘1–7), janela integrada à barra lateral no Mac.
 - **Atualiza sozinho** (`desktop/atualizador.cjs`, mesmo esquema do SOBEDESCE): confere `/baixar/versao` ao abrir e a cada hora, baixa o instalador do build novo em segundo plano, confere o SHA-256 e mostra "Atualizar agora" na barra lateral; um script espera o app fechar, troca (Mac: `.dmg` montado e `ditto`; Windows: NSIS em silêncio) e abre de novo. Se a troca falhar, o app antigo volta e o aviso oferece o Baixar. O build do app vem de `desktop/build-info.json`, gravado pelo CI (`node scripts/release.mjs build-info`).
 
 Distribuição (mesmo modelo do SOBEDESCE):
@@ -112,6 +112,32 @@ npm run smoke            # teste de fumaça
 npm run dist:mac         # .dmg (num Mac)
 npm run dist:win         # .exe (no Windows)
 ```
+
+## Organizar: SOBEDESCE › Synquei › DaVinci (só no app de desktop)
+
+Para o set: o Backup Automático do SOBEDESCE passa os cartões e o Synquei organiza tudo no DaVinci Resolve Studio, cartão por cartão, sem ninguém clicar.
+
+1. **Organizar › Ligar pasta do SOBEDESCE**: a pasta do projeto no HD (a que tem `Diária 01`, `Diária 02`…).
+2. **Instalar no DaVinci** e, no Resolve Studio, **Workspace › Scripts › Synquei** (deixe a janelinha aberta).
+3. A cada cartão que termina: o Synquei abre o projeto daquela diária (um projeto do Synquei por diária, criado sozinho), lê os arquivos novos, sincroniza e manda para o DaVinci.
+
+No DaVinci (projeto com o mesmo nome do projeto do SOBEDESCE, ou "Usar o projeto aberto" na janelinha):
+
+- **Media Pool:** `Diária 01 › Câmeras › Aladim - FX30 › Cartão 01`, `Diária 01 › Áudio › Som - F8 › Cartão 01`, `Diária 01 › Sequências` e `Assets` (o que estiver em `<projeto>/Assets`, com as subpastas). Só importa o que ainda não está lá.
+- **Cor por câmera**, a mesma em todas as diárias e igual à do Synquei.
+- **Metadados:** Camera #, Roll Card # (cartão), Keywords (diária, dono, cartão) e Scene/Take: do iXML do gravador e, no vídeo, herdados do áudio que ficou em cima dele na sincronia.
+- **Linhas do tempo da diária** (uma por sessão, em XML gravado em `<projeto>/Synquei/Sequências/`): a cada cartão novo, a antiga sai e entra a nova; se alguém editou a antiga (o número de clipes mudou), ela fica, com "(editada …)" no nome.
+
+Os originais nunca são movidos (o SOBEDESCE compara pelo caminho na segunda leva do mesmo cartão); o Synquei só cria em volta `Assets`, `Exports` e `Synquei/Sequências`.
+
+Como funciona:
+
+- `desktop/organizador.cjs`: vigia a pasta (a cada 4 s). Lê `<projeto>/.sobedesce/descargas.jsonl`, uma linha por cartão gravada pelo SOBEDESCE (diária, dono, câmera, pasta do cartão, arquivos), do ponto onde parou; sem esse arquivo (SOBEDESCE antigo), usa a estrutura de pastas e o relatório `SOBEDESCE_copia_*.xxh64`, que só aparece quando o cartão terminou. Guarda o que já foi visto em `organizador.json` (pasta de dados do app); o que chegou com o app fechado entra ao abrir.
+- A página lê os clipes pelo caminho (`app/js/media/pathfile.js`): um "File" que busca pedaços em `synquei://app/__midia` (com Range), servido só de dentro das pastas vigiadas. O monitor e as miniaturas usam o mesmo endereço.
+- `app/js/organizar.js`: fila de cartões, um por vez; espera se você estiver mexendo em outro projeto.
+- `desktop/davinci.cjs`: a ponte. O Resolve só deixa mexer no projeto por script (por isso o **Studio**: a versão grátis não aceita). O script Lua fica no menu Workspace › Scripts e conversa por uma pasta de troca: pedidos em Lua (`pedidos/000012.lua` + `indice.lua`), respostas em JSON, `vivo.json` a cada 3 s. No Windows a pasta fica em `C:\ProgramData\Synquei\davinci` (o Lua do Resolve não abre caminhos com acento).
+
+Testes: `tests/organizador.test.mjs` (resumo, linha pela metade, cancelado, segunda leva, permissões de leitura e escrita) e `tests/davinci.test.mjs` (o script do Resolve roda no LuaJIT com um Resolve de mentira: pastas, cores, Cena/Take, sem importar duas vezes, linha do tempo editada guardada, projeto errado esperando). Falta testar num DaVinci Resolve Studio de verdade.
 
 ## Rodar local
 
