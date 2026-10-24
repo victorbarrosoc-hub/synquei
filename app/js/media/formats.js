@@ -175,6 +175,7 @@ export const NAME_PATTERNS = [
 export const IGNORED = [
   { re: /(^|\/)\._/, why: 'Sombra do macOS (._arquivo) em cartão exFAT' },
   { re: /(^|\/)\.DS_Store$|(^|\/)Thumbs\.db$|(^|\/)desktop\.ini$/i, why: 'Arquivo do sistema' },
+  { re: /(^|\/)\.sobedesce(-anteriores)?\/|\.sobedesce-parcial$|(^|\/)SOBEDESCE_copia_[^/]*\.xxh64$/i, why: 'Controle do SOBEDESCE (relatório, versão antiga ou cópia pela metade)' },
   { re: /\.(thm|lrv|bim|cpi|mpl|bdm|ind|smi|xmp|rmd|rtf|pdf|txt|log|ale|edl|fcpxml|xml|json|csv|cpf|ppn|sav|dat|bin|lut|cube|3dl|cdl|lnk|ini|cfg|html?)$/i, why: 'Metadado, miniatura, proxy ou documento' },
   { re: /\.(jpg|jpeg|heic|heif|png|gif|webp|arw|cr2|cr3|nef|raf|orf|rw2|psd)$/i, why: 'Foto' },
 ]

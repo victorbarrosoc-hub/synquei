@@ -9,7 +9,10 @@ const path = require('node:path')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const { spawn } = require('node:child_process')
+const { Readable } = require('node:stream')
 const { Atualizador, readBuildInfo, handoffCommand, isHandoffScript } = require('./atualizador.cjs')
+const { Organizador } = require('./organizador.cjs')
+const { Ponte, pastaTroca } = require('./davinci.cjs')
 
 const SCHEME = 'synquei'
 const ROOT = path.join(__dirname, '..')
@@ -30,16 +33,46 @@ const MIME = {
   '.woff2': 'font/woff2',
 }
 
+// clipes servidos para a página (Organizar): o <video> pede pedaços (Range) e a leitura dos formatos também
+const MIME_MIDIA = { '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm', '.mkv': 'video/x-matroska', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.aac': 'audio/aac' }
+
 protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } }])
 
 // Um app só: abrir de novo traz a janela que já existe para a frente.
 if (!SMOKE && !app.requestSingleInstanceLock()) app.quit()
 
 let win = null
+let org = null
+let ponte = null
+
+/** synquei://app/__midia?c=<caminho>: um arquivo de uma pasta vigiada pelo Organizar, com Range. */
+async function midia(req, u) {
+  const abs = u.searchParams.get('c') || ''
+  if (!org || !path.isAbsolute(abs) || !org.permitido(abs)) return new Response('Fora das pastas vigiadas', { status: 403 })
+  let st
+  try {
+    st = await fsp.stat(abs)
+    if (!st.isFile()) throw new Error('não é arquivo')
+  } catch {
+    return new Response('Não encontrado', { status: 404 })
+  }
+  const type = MIME_MIDIA[path.extname(abs).toLowerCase()] || 'application/octet-stream'
+  const base = { 'content-type': type, 'accept-ranges': 'bytes', 'cache-control': 'no-store' }
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get('range') || '')
+  if (!m) {
+    const body = st.size ? Readable.toWeb(fs.createReadStream(abs)) : null
+    return new Response(body, { status: 200, headers: { ...base, 'content-length': String(st.size) } })
+  }
+  let a = m[1] === '' ? Math.max(0, st.size - Number(m[2] || 0)) : Number(m[1])
+  let b = m[1] === '' || m[2] === '' ? st.size - 1 : Math.min(Number(m[2]), st.size - 1)
+  if (a >= st.size || b < a) return new Response(null, { status: 416, headers: { ...base, 'content-range': `bytes */${st.size}` } })
+  return new Response(Readable.toWeb(fs.createReadStream(abs, { start: a, end: b })), { status: 206, headers: { ...base, 'content-length': String(b - a + 1), 'content-range': `bytes ${a}-${b}/${st.size}` } })
+}
 
 function serve() {
   protocol.handle(SCHEME, async (req) => {
     const u = new URL(req.url)
+    if (u.pathname === '/__midia') return midia(req, u)
     let rel = decodeURIComponent(u.pathname)
     if (rel.endsWith('/')) rel += 'index.html'
     const file = path.normalize(path.join(ROOT, rel))
@@ -126,6 +159,7 @@ function menu() {
         { label: 'Exportar', accelerator: 'CmdOrCtrl+5', click: tab('exportar') },
         { type: 'separator' },
         { label: 'Projetos', accelerator: 'CmdOrCtrl+6', click: tab('projetos') },
+        { label: 'Organizar (SOBEDESCE › DaVinci)', accelerator: 'CmdOrCtrl+7', click: tab('organizar') },
         { type: 'separator' },
         { label: 'Formatos', click: tab('formatos') },
         { label: 'Ajustes', accelerator: 'CmdOrCtrl+,', click: tab('ajustes') },
@@ -136,6 +170,58 @@ function menu() {
     { label: 'Ajuda', role: 'help', submenu: [{ label: 'Site do Synquei', click: () => shell.openExternal('https://synquei.vercel.app') }, { label: 'Formatos aceitos', click: () => shell.openExternal('https://synquei.vercel.app/formatos/') }] },
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// só a página do app (synquei://) fala com o processo principal
+const daPagina = (e) => {
+  try {
+    return new URL(e.senderFrame.url).protocol === `${SCHEME}:`
+  } catch {
+    return false
+  }
+}
+const handle = (canal, fn) =>
+  ipcMain.handle(canal, async (e, ...a) => {
+    if (!daPagina(e)) throw new Error('não permitido')
+    return fn(...a)
+  })
+const enviar = (canal, dado) => {
+  if (win && !win.isDestroyed()) win.webContents.send(canal, dado)
+}
+
+// ───────── Organizar: pasta do SOBEDESCE → Synquei → DaVinci (desktop/organizador.cjs e davinci.cjs) ─────────
+function iniciarOrganizar() {
+  const userData = app.getPath('userData')
+  org = new Organizador({ stateDir: userData, log: (...a) => console.log('[organizar]', ...a) })
+  ponte = new Ponte({ troca: pastaTroca(process.platform, userData), log: (...a) => console.log('[davinci]', ...a) })
+  org.on('cartao', (ev) => enviar('synquei:org-cartao', ev))
+  org.on('mudou', (st) => enviar('synquei:org-estado', st))
+  ponte.on('mudou', (st) => enviar('synquei:davinci', st))
+  ponte.on('resposta', (r) => enviar('synquei:davinci-resposta', r))
+  handle('org:estado', () => org.estado())
+  handle('org:escolher', async () => {
+    const r = await dialog.showOpenDialog(win, { title: 'Pasta do projeto no SOBEDESCE', buttonLabel: 'Organizar esta pasta', properties: ['openDirectory'] })
+    if (r.canceled || !r.filePaths[0]) return null
+    const p = await org.adicionar(r.filePaths[0])
+    return p.id
+  })
+  handle('org:remover', (id) => org.remover(String(id)))
+  handle('org:ligar', (id, ligado) => org.ligar(String(id), !!ligado))
+  handle('org:vincular', (id, dados) => org.vincular(String(id), dados || {}))
+  handle('org:marcar', (pastaId, cartaoId, estado, erro) => org.marcar(String(pastaId), String(cartaoId), String(estado), erro ? String(erro) : null))
+  handle('org:pendentes', (pastaId) => org.pendentes(String(pastaId)))
+  handle('org:todos', (pastaId) => org.todos(String(pastaId)))
+  handle('org:assets', (pastaId) => org.assets(String(pastaId)))
+  handle('org:escrever', (pastaId, rel, texto) => org.escrever(String(pastaId), String(rel), String(texto)))
+  handle('org:abrir', (pastaId) => {
+    const raiz = org.raizDe(String(pastaId))
+    return raiz ? shell.openPath(raiz) : null
+  })
+  handle('davinci:status', () => ponte.status())
+  handle('davinci:instalar', () => ponte.instalar())
+  handle('davinci:enviar', (pedido) => ponte.enviar(pedido))
+  org.start()
+  ponte.start()
 }
 
 // ───────── atualização pelo próprio app (desktop/atualizador.cjs) ─────────
@@ -176,19 +262,6 @@ function iniciarAtualizador() {
   atu.on('change', (st) => {
     if (win && !win.isDestroyed()) win.webContents.send('synquei:atualizacao', st)
   })
-  // só a página do app (synquei://) fala com o atualizador
-  const daPagina = (e) => {
-    try {
-      return new URL(e.senderFrame.url).protocol === `${SCHEME}:`
-    } catch {
-      return false
-    }
-  }
-  const handle = (canal, fn) =>
-    ipcMain.handle(canal, async (e, ...a) => {
-      if (!daPagina(e)) throw new Error('não permitido')
-      return fn(...a)
-    })
   handle('atu:status', () => atu.status())
   handle('atu:verificar', () => atu.check())
   handle('atu:aplicar', () => atu.aplicarAgora())
@@ -247,7 +320,10 @@ app.whenReady().then(() => {
   menu()
   createWindow()
   if (SMOKE) smoke()
-  else iniciarAtualizador()
+  else {
+    iniciarAtualizador()
+    iniciarOrganizar()
+  }
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -262,6 +338,8 @@ app.on('second-instance', () => {
 
 app.on('before-quit', () => {
   if (atu) atu.stop()
+  if (org) org.stop()
+  if (ponte) ponte.stop()
 })
 
 app.on('window-all-closed', () => {

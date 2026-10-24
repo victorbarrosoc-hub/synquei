@@ -6,6 +6,7 @@ import { duration, rateLabel } from '../time.js'
 import { devColor, KIND_LABEL } from '../media/devices.js'
 import { regroup, methodLabel } from '../project.js'
 import { go } from '../main.js'
+import { urlDe, soltarUrl } from '../media/pathfile.js'
 
 const KIND_ICON = { camera: 'camera', recorder: 'mic', phone: 'phone', action: 'action', drone: 'drone' }
 const thumbs = new Map()
@@ -288,9 +289,9 @@ async function loadThumbs(root) {
 function frame(file) {
   return new Promise((resolve, reject) => {
     const v = document.createElement('video')
-    const url = URL.createObjectURL(file)
+    const url = urlDe(file)
     const done = (x) => {
-      URL.revokeObjectURL(url)
+      soltarUrl(url)
       v.removeAttribute('src')
       v.load()
       x ? resolve(x) : reject(new Error('sem quadro'))

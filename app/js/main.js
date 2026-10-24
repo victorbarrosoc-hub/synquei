@@ -18,11 +18,13 @@ import linha from './views/linha.js'
 import exportar from './views/exportar.js'
 import formatos from './views/formatos.js'
 import ajustes from './views/ajustes.js'
+import organizar from './views/organizar.js'
+import { iniciarOrganizar, O as ORG } from './organizar.js'
 
-const VIEWS = { inicio, projetos, midia, sincronizar, linha, exportar, formatos, ajustes }
+const VIEWS = { inicio, projetos, midia, sincronizar, linha, exportar, formatos, ajustes, organizar }
 const ORDER = ['inicio', 'midia', 'sincronizar', 'linha', 'exportar']
 // ordem da barra lateral: decide se a tela entra pela direita ou pela esquerda
-const SEQ = ['inicio', 'midia', 'sincronizar', 'linha', 'exportar', 'projetos', 'formatos', 'ajustes']
+const SEQ = ['inicio', 'midia', 'sincronizar', 'linha', 'exportar', 'projetos', 'organizar', 'formatos', 'ajustes']
 const calm = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function go(route, force) {
@@ -99,6 +101,13 @@ function chrome() {
   movePill()
   activity()
   const p = S.project
+  const ob = $('[data-badge="organizar"]')
+  if (ob) {
+    const n = ORG.fila.length + (ORG.atual ? 1 : 0)
+    ob.hidden = !n
+    ob.textContent = n
+    ob.classList.toggle('is-live', !!ORG.atual)
+  }
   const mb = $('[data-badge="midia"]')
   const sb = $('[data-badge="sincronizar"]')
   if (mb) {
@@ -430,6 +439,9 @@ if (window.synqueiDesktop) {
 loadIndex()
 render()
 iniciarAtualizacao()
+iniciarOrganizar().catch((err) => console.error('organizar:', err))
+// Organizar: a tela redesenha quando chega cartão ou muda o DaVinci; a barra lateral mostra a fila
+document.addEventListener('synquei:organizar-mudou', () => (S.route === 'organizar' ? render() : chrome()))
 // Ajustes mostra a versão e o estado da atualização: redesenha quando muda
 document.addEventListener('synquei:atualizacao-mudou', () => S.route === 'ajustes' && render())
 
